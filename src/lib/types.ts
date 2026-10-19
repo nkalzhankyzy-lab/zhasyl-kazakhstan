@@ -131,7 +131,7 @@ export interface SensorReading {
   /** Осы сәтте желдету оқиғасы басталды */
   ventilationEvent: boolean;
   note: string;
-  source: "demo-scenario" | "manual" | "csv";
+  source: "demo-scenario" | "manual" | "csv" | "sensor";
 }
 
 /** Графикте белгіленетін желдету оқиғасы (өлшемдерден алынады). */

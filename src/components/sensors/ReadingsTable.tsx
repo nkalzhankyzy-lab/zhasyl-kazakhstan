@@ -43,7 +43,7 @@ export function ReadingsTable({ readings, classroomId }: { readings: SensorReadi
                 <tr key={r.id} className={`border-t border-line ${issues.length ? "bg-orange-50/70" : ""}`}>
                   <td className="px-3 py-1.5">
                     {formatDateTime(r.timestamp)}
-                    <span className="block text-[11px] text-muted">{r.source === "csv" ? "CSV" : "қолмен"}</span>
+                    <span className="block text-[11px] text-muted">{r.source === "csv" ? "CSV" : r.source === "sensor" ? "датчик" : "қолмен"}</span>
                   </td>
                   <td className="px-2 py-1.5">{formatValue(r.co2Ppm, "co2Ppm")}</td>
                   <td className="px-2 py-1.5">{formatValue(r.temperatureC, "temperatureC")}</td>

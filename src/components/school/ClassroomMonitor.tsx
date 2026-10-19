@@ -40,7 +40,7 @@ export function DataMeta({ readings, mode, narrow }: { readings: { timestamp: st
       </div>
       <div className="rounded-xl bg-white px-3 py-2 ring-1 ring-line">
         <dt className="text-xs text-muted">Дереккөз</dt>
-        <dd className="font-semibold">{mode === "demo" ? "Алдын ала дайындалған көрсетілім сценарийі" : "Қолмен енгізу және CSV импорт (датчик қосылмаған)"}</dd>
+        <dd className="font-semibold">{mode === "demo" ? "Алдын ала дайындалған көрсетілім сценарийі" : "Қолмен енгізу және CSV импорт (датчик әлі қосылмаған)"}</dd>
       </div>
     </dl>
   );
