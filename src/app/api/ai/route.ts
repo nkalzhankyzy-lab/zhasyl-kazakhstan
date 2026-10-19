@@ -23,7 +23,7 @@ function attempts(key: string): Attempt[] {
     url: `${VERTEX_BASE}/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(key)}`,
     headers: {},
   }));
-  return key.startsWith("AQ.") ? [...vertex, ...studio] : [...studio, ...vertex];
+  return key.startsWith("AQ") ? [...vertex, ...studio] : [...studio, ...vertex];
 }
 
 function googleReason(detail: string) {
@@ -69,7 +69,8 @@ const fail = (status: number, error: string) => Response.json({ error }, { statu
 
 export async function POST(request: Request) {
   // Көшіргенде қосылып кететін бос орын мен тырнақшаны алып тастаймыз
-  const key = process.env.GEMINI_API_KEY?.trim().replace(/^["']+|["']+$/g, "");
+  // Көшіргенде қосылып кететін бос орын, тырнақша және «GEMINI_API_KEY=» бөлігін алып тастаймыз
+  const key = process.env.GEMINI_API_KEY?.trim().replace(/^GEMINI_API_KEY\s*=\s*/, "").replace(/^["']+|["']+$/g, "").trim();
   if (!key) return fail(503, "ЖИ көмекші әлі қосылмаған: серверде GEMINI_API_KEY бапталмаған.");
 
   const ip = request.headers.get("x-forwarded-for")?.split(",")[0].trim() || "local";
@@ -130,8 +131,16 @@ export async function POST(request: Request) {
   if (!res) {
     const last = errors[errors.length - 1];
     // Ең пайдалы түсіндірме — 404-тен өзге алғашқы қате
-    const main = errors.find((e) => e.status !== 404 && e.status !== 0) ?? errors[0];
-    const tail = main ? ` [${main.text}]` : "";
+    // Әр мекенжайдың бір қатесі + кілттің қауіпсіз белгісі (алғашқы 4 таңба мен ұзындығы)
+    const seen = new Set<string>();
+    const lines = errors.filter((e) => {
+      const lbl = e.text.split(" ")[0] + e.text.split(" ")[1];
+      if (seen.has(lbl) || e.status === 404) return false;
+      seen.add(lbl);
+      return true;
+    });
+    const shown = (lines.length ? lines : errors.slice(0, 1)).map((e) => e.text).join(" | ");
+    const tail = ` [${shown}; кілт «${key.slice(0, 4)}…», ${key.length} таңба]`;
     if (!last || errors.every((e) => e.status === 0)) return fail(502, "ЖИ қызметіне қосылу мүмкін болмады. Интернетті тексеріп, қайталап көріңіз.");
     if (last.status === 429) return fail(429, "ЖИ қызметінің лимиті таусылды. Біраздан кейін қайталап көріңіз." + tail);
     if (last.status >= 500) return fail(502, "ЖИ қызметі уақытша жауап бермей тұр. Қайталап көріңіз." + tail);
