@@ -1,0 +1,113 @@
+"use client";
+
+import { BookOpen, Database, FlaskConical, Library, Map as MapIcon, School, Sprout, UserRound } from "lucide-react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
+import { Logo } from "./Logo";
+
+const NAV = [
+  { href: "/", label: "Экокарта", icon: MapIcon },
+  { href: "/garden", label: "Менің бағым", icon: Sprout },
+  { href: "/lab", label: "Зертхана", icon: FlaskConical },
+  { href: "/schools", label: "Мектептер", icon: School },
+];
+
+const MENU = [
+  { href: "/journal", label: "Зерттеу күнделігі", icon: BookOpen },
+  { href: "/data", label: "Менің деректерім", icon: Database },
+  { href: "/sources", label: "Дереккөздер", icon: Library },
+];
+
+export function Header() {
+  const pathname = usePathname();
+  const [open, setOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const close = (e: MouseEvent | KeyboardEvent) => {
+      if (e instanceof KeyboardEvent ? e.key === "Escape" : !menuRef.current?.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", close);
+    document.addEventListener("keydown", close);
+    return () => {
+      document.removeEventListener("mousedown", close);
+      document.removeEventListener("keydown", close);
+    };
+  }, [open]);
+
+  const isActive = (href: string) => (href === "/" ? pathname === "/" : pathname.startsWith(href));
+
+  return (
+    <header className="sticky top-0 z-40 border-b border-line/70 bg-cream/90 backdrop-blur">
+      <div className="mx-auto flex max-w-[1440px] items-center gap-3 px-4 py-2.5 sm:px-6">
+        <Link href="/" className="flex shrink-0 items-center gap-2 rounded-xl" aria-label="Жасыл Қазақстан — басты бет">
+          <Logo />
+          <span className="font-serif text-xl font-bold text-forest sm:text-2xl">Жасыл Қазақстан</span>
+        </Link>
+        <nav aria-label="Негізгі мәзір" className="ml-auto hidden md:block">
+          <ul className="flex items-center gap-1">
+            {NAV.map(({ href, label, icon: Icon }) => (
+              <li key={href}>
+                <Link
+                  href={href}
+                  aria-current={isActive(href) ? "page" : undefined}
+                  className={`flex items-center gap-2 rounded-xl px-3.5 py-2 text-[15px] font-semibold transition ${
+                    isActive(href) ? "bg-mint-2 text-forest shadow-sm" : "text-ink/80 hover:bg-mint"
+                  }`}
+                >
+                  <Icon size={18} aria-hidden />
+                  {label}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
+        <div className="relative ml-auto md:ml-2" ref={menuRef}>
+          <button
+            type="button"
+            onClick={() => setOpen((o) => !o)}
+            aria-expanded={open}
+            aria-haspopup="menu"
+            className="flex h-11 items-center gap-2 rounded-full border border-line bg-paper pl-1.5 pr-3 text-sm font-semibold text-forest shadow-sm hover:bg-mint"
+          >
+            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-mint-2">
+              <UserRound size={18} aria-hidden />
+            </span>
+            <span className="hidden sm:inline">Қонақ</span>
+          </button>
+          {open && (
+            <div role="menu" className="absolute right-0 mt-2 w-72 rounded-2xl border border-line bg-paper p-2 shadow-lift">
+              <p className="px-3 pb-2 pt-1 text-xs text-muted">Аккаунт жоқ: деректер осы браузерде сақталады.</p>
+              {MENU.map(({ href, label, icon: Icon }) => (
+                <Link key={href} role="menuitem" href={href} onClick={() => setOpen(false)} className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-[15px] font-medium hover:bg-mint">
+                  <Icon size={18} className="text-forest" aria-hidden />
+                  {label}
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+      {/* Телефондағы мәзір */}
+      <nav aria-label="Негізгі мәзір (телефон)" className="border-t border-line/60 md:hidden">
+        <ul className="grid grid-cols-4">
+          {NAV.map(({ href, label, icon: Icon }) => (
+            <li key={href}>
+              <Link
+                href={href}
+                aria-current={isActive(href) ? "page" : undefined}
+                className={`flex flex-col items-center gap-0.5 px-1 py-1.5 text-[12px] font-semibold ${isActive(href) ? "text-forest" : "text-muted"}`}
+              >
+                <span className={`flex h-7 w-12 items-center justify-center rounded-full ${isActive(href) ? "bg-mint-2" : ""}`}>
+                  <Icon size={18} aria-hidden />
+                </span>
+                {label}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </nav>
+    </header>
+  );
+}

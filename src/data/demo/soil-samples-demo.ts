@@ -1,0 +1,41 @@
+import type { SoilSample } from "@/lib/types";
+
+// Демо үлгілер — интерфейсті көрсету үшін. Өлшем мәндері әдейі енгізілмеген.
+export const DEMO_SOIL_SAMPLES: SoilSample[] = [
+  {
+    id: "demo-soil-1",
+    status: "demo",
+    name: "Демо: Сырдария жайылмасы маңындағы үлгі",
+    regionId: "KZ-43",
+    locationDescription: "Шартты нүкте — нақты сынама алынған орын емес",
+    coordinates: { lat: 44.95, lon: 65.05 },
+    collectedAt: "2026-10-01",
+    depthCm: 10,
+    photo: null,
+    ph: null,
+    moisture: null,
+    ec: null,
+    observations: "Демо мысал: беті ақшыл қабыршақпен жабылған, тұз кристалдары көзге көрінеді.",
+    conclusion: "Демо мысал: тұздылықты бағалау үшін ЭӨ өлшемі қажет.",
+    createdAt: "2026-10-01T06:00:00.000Z",
+    updatedAt: "2026-10-01T06:00:00.000Z",
+  },
+  {
+    id: "demo-soil-2",
+    status: "demo",
+    name: "Демо: мектеп ауласындағы құмдақ үлгі",
+    regionId: "KZ-43",
+    locationDescription: "Координатсыз демо үлгі — аймақ тізімінде ғана көрсетіледі",
+    coordinates: null,
+    collectedAt: "2026-10-03",
+    depthCm: null,
+    photo: null,
+    ph: null,
+    moisture: null,
+    ec: null,
+    observations: "Демо мысал: түйіршіктері ірі, саусақпен уқалағанда шашырап кетеді.",
+    conclusion: "",
+    createdAt: "2026-10-03T06:00:00.000Z",
+    updatedAt: "2026-10-03T06:00:00.000Z",
+  },
+];

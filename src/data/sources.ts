@@ -1,0 +1,111 @@
+import type { SourceReference } from "@/lib/types";
+
+// Барлық дереккөз 2026-10-19 күні ашылып, тексерілді.
+export const SOURCES: SourceReference[] = [
+  {
+    id: "amcharts-geodata",
+    title: "amCharts 5 Geodata — kazakhstan2023High (облыстар мен республикалық маңызы бар қалалар, 2022 жылғы әкімшілік бөлініс)",
+    publisher: "amCharts",
+    url: "https://www.npmjs.com/package/@amcharts/amcharts5-geodata",
+    accessedAt: "2026-10-19",
+    edition: "@amcharts/amcharts5-geodata 5.1.6",
+    license: "amCharts linkware лицензиясы (LICENSE файлы жобада сақталған; карта астында amCharts сілтемесі көрсетіледі)",
+    note: "17 облыс және Астана, Алматы, Шымкент қалалары. Координаттар облыс деңгейіндегі карта үшін ~1 км дәлдікке дейін дөңгелектенді.",
+  },
+  {
+    id: "natural-earth",
+    title: "Natural Earth: 1:10m Lakes, 1:10m Rivers + lake centerlines, 1:50m Ocean (Каспий)",
+    publisher: "Natural Earth",
+    url: "https://github.com/nvkelso/natural-earth-vector",
+    accessedAt: "2026-10-19",
+    edition: "GitHub master, VERSION 5.2.0-pre",
+    license: "Қоғамдық игілік (public domain)",
+    note: "Су қабаты: Каспий, Арал, Балқаш, Зайсан, Алакөл және ірі өзендер. Жағалау сызығы уақыт өте өзгереді (әсіресе Арал).",
+  },
+  {
+    id: "wiki-regions",
+    title: "Regions of Kazakhstan",
+    publisher: "Wikipedia",
+    url: "https://en.wikipedia.org/wiki/Regions_of_Kazakhstan",
+    accessedAt: "2026-10-19",
+    note: "Облыс орталықтары мен аумақтары; Абай, Жетісу, Ұлытау облыстары 2022 жылы құрылғаны.",
+  },
+  {
+    id: "wiki-kyzylorda-region",
+    title: "Kyzylorda Region",
+    publisher: "Wikipedia",
+    url: "https://en.wikipedia.org/wiki/Kyzylorda_Region",
+    accessedAt: "2026-10-19",
+    note: "Аумағы 226 019 км², халқы 823 251 (2022-01-01), Сырдария, Арал маңы Қарақұмы, Кіші Борсық.",
+  },
+  {
+    id: "wiki-kyzylorda-city",
+    title: "Kyzylorda — Climate (Climate data for Kyzylorda, 1991–2020)",
+    publisher: "Wikipedia (кесте дереккөзі: Pogoda.ru.net)",
+    url: "https://en.wikipedia.org/wiki/Kyzylorda",
+    accessedAt: "2026-10-19",
+    edition: "Орташа мәндер 1991–2020",
+  },
+  {
+    id: "invest-kyzylorda",
+    title: "Kyzylorda region — About the region",
+    publisher: "Kazakh Invest, Қызылорда облысы өңірлік сайты",
+    url: "https://kyzylorda.invest.gov.kz/about",
+    accessedAt: "2026-10-19",
+    note: "Жер бедері, климат, топырақ, су ресурстары, өсімдіктер. Бұл сайтта аумақ 251 971 км² деп берілген.",
+  },
+  {
+    id: "qazaqgeography-kyzylorda",
+    title: "Kyzylorda oblast",
+    publisher: "QazaqGeography",
+    url: "https://qazaqgeography.kz/en/kyzylorda-oblast-22102911",
+    accessedAt: "2026-10-19",
+  },
+  {
+    id: "zinabdin-2020",
+    title:
+      "Zinabdin N.B. Landscape and Ecological Analysis of Land Degradation in the Syrdarya River Delta and the Dried Bottom of the Aral Sea // Journal of Geography and Environmental Management, 2020, 55(4), 37–46",
+    publisher: "ҚазҰУ, География және табиғатты пайдалану журналы",
+    url: "https://bulletin-geography.kaznu.kz/index.php/1-geo/en/article/view/824",
+    accessedAt: "2026-10-19",
+  },
+  {
+    id: "yapiyev-2018",
+    title: "Yapiyev V. et al. Top soil physical and chemical properties in Kazakhstan across a north-south gradient // Scientific Data, 2018, 5, 180242",
+    publisher: "Nature Portfolio",
+    url: "https://doi.org/10.1038/sdata.2018.242",
+    accessedAt: "2026-10-19",
+    note: "Қазақстандағы топырақ қасиеттерінің солтүстіктен оңтүстікке өзгеруі туралы ашық дерек жинағы (40 нүкте). Шартты схема үшін қосымша оқу материалы.",
+  },
+  {
+    id: "wiki-haloxylon",
+    title: "Haloxylon ammodendron",
+    publisher: "Wikipedia",
+    url: "https://en.wikipedia.org/wiki/Haloxylon_ammodendron",
+    accessedAt: "2026-10-19",
+  },
+  {
+    id: "wiki-elaeagnus",
+    title: "Elaeagnus angustifolia",
+    publisher: "Wikipedia",
+    url: "https://en.wikipedia.org/wiki/Elaeagnus_angustifolia",
+    accessedAt: "2026-10-19",
+  },
+  {
+    id: "wiki-artemisia",
+    title: "Artemisia (plant)",
+    publisher: "Wikipedia",
+    url: "https://en.wikipedia.org/wiki/Artemisia_(plant)",
+    accessedAt: "2026-10-19",
+  },
+  {
+    id: "iana-tz",
+    title: "Time Zone Database — Asia/Qyzylorda",
+    publisher: "IANA",
+    url: "https://www.iana.org/time-zones",
+    accessedAt: "2026-10-19",
+    note: "2018-12-21 бастап Asia/Qyzylorda = UTC+05:00.",
+  },
+];
+
+export const sourceById = (id: string) => SOURCES.find((s) => s.id === id);
