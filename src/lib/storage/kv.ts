@@ -1,10 +1,9 @@
-// Төменгі деңгейдегі кілт-мән қоймасы. Қазір — браузердің localStorage.
-// Болашақта серверлік дерекқорға ауысқанда тек осы қабат пен repositories.ts ауысады,
-// интерфейс компоненттері өзгермейді.
+// Төменгі деңгейдегі кілт-мән қоймасы — браузердің localStorage.
+// Supabase бапталмаған кезде (жергілікті режим) repositories.ts осы қабатты қолданады.
 
 export type SaveResult =
   | { ok: true }
-  | { ok: false; reason: "quota" | "unavailable" | "unknown"; message: string };
+  | { ok: false; reason: "quota" | "unavailable" | "forbidden" | "network" | "unknown"; message: string };
 
 export interface KeyValueStore {
   read<T>(key: string): T | null;

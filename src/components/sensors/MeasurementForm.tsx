@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import { checkReading, parseOptionalNumber, VENTILATION_LABELS, type Issue } from "@/lib/metrics";
 import { newId, repositories } from "@/lib/storage/repositories";
 import { isoToInputValue, nowInputValue, parseLocalTimestamp, TZ_LABEL } from "@/lib/time";
@@ -32,12 +32,13 @@ export function MeasurementForm({ open, onClose, classroomId, initial, onSaved }
   const [issues, setIssues] = useState<Issue[]>([]);
   const [confirmWarn, setConfirmWarn] = useState(false);
   const feedback = useSaveFeedback();
+  const saving = useRef(false);
   const set = (k: keyof typeof f) => (e: { target: { value: string } }) => {
     setF((x) => ({ ...x, [k]: e.target.value }));
     setConfirmWarn(false);
   };
 
-  const submit = (e: FormEvent) => {
+  const submit = async (e: FormEvent) => {
     e.preventDefault();
     const ts = parseLocalTimestamp(f.when);
     const nums = { co2Ppm: parseOptionalNumber(f.co2), temperatureC: parseOptionalNumber(f.temp), humidityPct: parseOptionalNumber(f.hum), pm25UgM3: parseOptionalNumber(f.pm), occupants: parseOptionalNumber(f.occ) };
@@ -66,7 +67,11 @@ export function MeasurementForm({ open, onClose, classroomId, initial, onSaved }
       note: f.note.trim(),
       source: initial?.source ?? "manual",
     };
-    if (feedback(repositories.readings.upsert(reading), initial ? "Өлшем жаңартылды" : "Өлшем сақталды")) {
+    if (saving.current) return;
+    saving.current = true;
+    const ok = await feedback(repositories.readings.upsert(reading), initial ? "Өлшем жаңартылды" : "Өлшем сақталды");
+    saving.current = false;
+    if (ok) {
       onSaved?.(reading);
       onClose();
     }

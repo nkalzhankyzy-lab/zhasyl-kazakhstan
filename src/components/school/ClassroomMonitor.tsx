@@ -8,7 +8,8 @@ import { METRICS } from "@/lib/metrics";
 import { formatDateTime, formatDayKey, localDayKey, TZ_LABEL } from "@/lib/time";
 import type { Classroom, MetricKey } from "@/lib/types";
 import { useHydrated } from "@/lib/storage/hooks";
-import { useDataMode } from "../Providers";
+import { STORAGE_WHERE } from "@/lib/supabase/client";
+import { useDataMode, useEditGuard } from "../Providers";
 import { CsvImport } from "../sensors/CsvImport";
 import { DataModeSwitch } from "../sensors/DataModeSwitch";
 import { MeasurementForm } from "../sensors/MeasurementForm";
@@ -50,6 +51,7 @@ export function ClassroomMonitor({ classroom }: { classroom: Classroom }) {
   const { readings, events } = useClassroomReadings(classroom.id, mode);
   const [metric, setMetric] = useState<MetricKey>("co2Ppm");
   const [formOpen, setFormOpen] = useState(false);
+  const guard = useEditGuard();
   const days = useMemo(() => [...new Set(readings.map((r) => localDayKey(r.timestamp)))].sort(), [readings]);
   const [dayPick, setDayPick] = useState<string | null>(null);
   const day = dayPick && days.includes(dayPick) ? dayPick : days[days.length - 1];
@@ -85,9 +87,9 @@ export function ClassroomMonitor({ classroom }: { classroom: Classroom }) {
       {empty ? (
         <div className="flex flex-col items-start gap-3 rounded-2xl border border-dashed border-line bg-white px-5 py-6">
           <p className="text-lg font-semibold">Өлшем енгізілмеген</p>
-          <p className="text-sm text-muted">Датчик көрсеткішін қолмен енгізіңіз немесе CSV файлын импорттаңыз. Деректер осы браузерде сақталады.</p>
+          <p className="text-sm text-muted">Датчик көрсеткішін қолмен енгізіңіз немесе CSV файлын импорттаңыз. Деректер {STORAGE_WHERE} сақталады.</p>
           <div className="flex flex-wrap gap-2">
-            <button type="button" className="btn btn-primary" onClick={() => setFormOpen(true)}>
+            <button type="button" className="btn btn-primary" onClick={guard(() => setFormOpen(true))}>
               <PlusCircle size={18} aria-hidden /> Өлшем енгізу
             </button>
             <CsvImport classroomId={classroom.id} />
@@ -146,7 +148,7 @@ export function ClassroomMonitor({ classroom }: { classroom: Classroom }) {
               Енгізілген өлшемдер ({readings.length})
             </h3>
             <div className="flex flex-wrap gap-2">
-              <button type="button" className="btn btn-primary" onClick={() => setFormOpen(true)}>
+              <button type="button" className="btn btn-primary" onClick={guard(() => setFormOpen(true))}>
                 <PlusCircle size={18} aria-hidden /> Өлшем енгізу
               </button>
               <CsvImport classroomId={classroom.id} />

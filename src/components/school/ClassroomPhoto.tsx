@@ -4,26 +4,29 @@ import { Camera, RotateCcw } from "lucide-react";
 import Image from "next/image";
 import { useState } from "react";
 import { compressImage } from "@/lib/image";
-import { useValue } from "@/lib/storage/hooks";
+import { useAuth, useValue } from "@/lib/storage/hooks";
 import { repositories } from "@/lib/storage/repositories";
 import type { Classroom } from "@/lib/types";
-import { useSaveFeedback, useToast } from "../Providers";
+import { STORAGE_WHERE } from "@/lib/supabase/client";
+import { useEditGuard, useSaveFeedback, useToast } from "../Providers";
 import { Badge } from "../ui/Badge";
 
-/** Кабинет суреті: әзірге иллюстрация, нақты фотоға ауыстыруға болады (браузерде сақталады) */
+/** Кабинет суреті: әзірге иллюстрация, нақты фотоға ауыстыруға болады */
 export function ClassroomPhoto({ classroom, compact = false }: { classroom: Classroom; compact?: boolean }) {
   const repo = repositories.classroomPhoto(classroom.id);
   const photo = useValue(repo);
   const [busy, setBusy] = useState(false);
   const feedback = useSaveFeedback();
   const toast = useToast();
+  const guard = useEditGuard();
+  const { canEdit } = useAuth();
 
   const onFile = async (file?: File) => {
     if (!file) return;
     setBusy(true);
     try {
       const data = await compressImage(file, 1280, 0.78);
-      feedback(repo.set(data), "Кабинет фотосы сақталды");
+      await feedback(repo.set(data), "Кабинет фотосы сақталды");
     } catch (e) {
       toast("error", (e as Error).message);
     } finally {
@@ -46,17 +49,23 @@ export function ClassroomPhoto({ classroom, compact = false }: { classroom: Clas
       </div>
       {!compact && (
         <figcaption className="flex flex-wrap items-center gap-2 px-3 py-2.5">
-          <label className="btn btn-soft cursor-pointer !min-h-10 text-sm">
-            <Camera size={16} aria-hidden />
-            {busy ? "Ықшамдалуда…" : photo ? "Фотоны ауыстыру" : "Нақты фото жүктеу"}
-            <input type="file" accept="image/*" className="sr-only" onChange={(e) => onFile(e.target.files?.[0])} />
-          </label>
+          {canEdit ? (
+            <label className="btn btn-soft cursor-pointer !min-h-10 text-sm">
+              <Camera size={16} aria-hidden />
+              {busy ? "Сақталуда…" : photo ? "Фотоны ауыстыру" : "Нақты фото жүктеу"}
+              <input type="file" accept="image/*" className="sr-only" onChange={(e) => onFile(e.target.files?.[0])} />
+            </label>
+          ) : (
+            <button type="button" className="btn btn-soft !min-h-10 text-sm" onClick={guard(() => {})}>
+              <Camera size={16} aria-hidden /> {photo ? "Фотоны ауыстыру" : "Нақты фото жүктеу"}
+            </button>
+          )}
           {photo && (
-            <button type="button" className="btn btn-ghost !min-h-10 text-sm" onClick={() => repo.clear()}>
+            <button type="button" className="btn btn-ghost !min-h-10 text-sm" onClick={guard(() => void feedback(repo.clear(), "Иллюстрация қайтарылды"))}>
               <RotateCcw size={16} aria-hidden /> Иллюстрацияға қайтару
             </button>
           )}
-          <span className="text-xs text-muted">Фото ықшамдалып, осы браузерде сақталады.</span>
+          <span className="text-xs text-muted">Фото ықшамдалып, {STORAGE_WHERE} сақталады.</span>
         </figcaption>
       )}
     </figure>

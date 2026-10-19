@@ -6,7 +6,7 @@ import { checkReading, formatValue, VENTILATION_LABELS } from "@/lib/metrics";
 import { repositories } from "@/lib/storage/repositories";
 import { formatDateTime } from "@/lib/time";
 import type { SensorReading } from "@/lib/types";
-import { useSaveFeedback } from "../Providers";
+import { useEditGuard, useSaveFeedback } from "../Providers";
 import { Dialog } from "../ui/Dialog";
 import { MeasurementForm } from "./MeasurementForm";
 
@@ -14,6 +14,7 @@ export function ReadingsTable({ readings, classroomId }: { readings: SensorReadi
   const [edit, setEdit] = useState<SensorReading | null>(null);
   const [del, setDel] = useState<SensorReading | null>(null);
   const feedback = useSaveFeedback();
+  const guard = useEditGuard();
   const rows = [...readings].reverse();
   return (
     <div>
@@ -62,10 +63,10 @@ export function ReadingsTable({ readings, classroomId }: { readings: SensorReadi
                     ))}
                   </td>
                   <td className="whitespace-nowrap px-2 py-1.5">
-                    <button type="button" className="rounded-lg p-2 text-forest hover:bg-mint" aria-label="Өңдеу" onClick={() => setEdit(r)}>
+                    <button type="button" className="rounded-lg p-2 text-forest hover:bg-mint" aria-label="Өңдеу" onClick={guard(() => setEdit(r))}>
                       <Pencil size={16} />
                     </button>
-                    <button type="button" className="rounded-lg p-2 text-alert hover:bg-red-50" aria-label="Жою" onClick={() => setDel(r)}>
+                    <button type="button" className="rounded-lg p-2 text-alert hover:bg-red-50" aria-label="Жою" onClick={guard(() => setDel(r))}>
                       <Trash2 size={16} />
                     </button>
                   </td>
@@ -89,7 +90,7 @@ export function ReadingsTable({ readings, classroomId }: { readings: SensorReadi
               type="button"
               className="btn btn-danger"
               onClick={() => {
-                if (del) feedback(repositories.readings.remove(del.id), "Өлшем жойылды");
+                if (del) void feedback(repositories.readings.remove(del.id), "Өлшем жойылды");
                 setDel(null);
               }}
             >

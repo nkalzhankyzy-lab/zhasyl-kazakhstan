@@ -1,7 +1,7 @@
 "use client";
 
 import { BookOpen, Pencil, PlusCircle, Trash2 } from "lucide-react";
-import { useMemo, useState, type FormEvent } from "react";
+import { useMemo, useRef, useState, type FormEvent } from "react";
 import { DEMO_SOIL_SAMPLES } from "@/data/demo/soil-samples-demo";
 import { MAIN_CLASSROOM } from "@/data/schools";
 import { parseOptionalNumber } from "@/lib/metrics";
@@ -10,7 +10,7 @@ import { newId, repositories } from "@/lib/storage/repositories";
 import { formatDate, todayLocalDate } from "@/lib/time";
 import type { ResearchEntry, SoilSample } from "@/lib/types";
 import { keepFieldVisible } from "@/lib/ui";
-import { useSaveFeedback } from "../Providers";
+import { useEditGuard, useSaveFeedback } from "../Providers";
 import { SoilSampleForm } from "../soil/SoilSampleForm";
 import { SoilSampleCard } from "../soil/SoilSampleList";
 import { Badge } from "../ui/Badge";
@@ -67,9 +67,10 @@ function EntryForm({ open, onClose, initial, samples }: { open: boolean; onClose
   const [f, setF] = useState<F>(() => (initial ? toForm(initial) : emptyForm("classroom")));
   const [error, setError] = useState<string | null>(null);
   const feedback = useSaveFeedback();
+  const saving = useRef(false);
   const set = (k: keyof F) => (e: { target: { value: string } }) => setF((x) => ({ ...x, [k]: e.target.value }));
 
-  const submit = (e: FormEvent) => {
+  const submit = async (e: FormEvent) => {
     e.preventDefault();
     if (!f.question.trim()) return setError("Зерттеу сұрағын жазыңыз");
     const nums = [f.occupants, f.comfortable, f.neutral, f.uncomfortable].map(parseOptionalNumber);
@@ -99,7 +100,11 @@ function EntryForm({ open, onClose, initial, samples }: { open: boolean; onClose
       createdAt: initial?.createdAt ?? now,
       updatedAt: now,
     };
-    if (feedback(repositories.journal.upsert(entry), initial ? "Жазба жаңартылды" : "Жазба күнделікке қосылды")) onClose();
+    if (saving.current) return;
+    saving.current = true;
+    const ok = await feedback(repositories.journal.upsert(entry), initial ? "Жазба жаңартылды" : "Жазба күнделікке қосылды");
+    saving.current = false;
+    if (ok) onClose();
   };
 
   // Компонент емес, функция: әр рендерде өріс қайта құрылып, фокус жоғалмас үшін
@@ -212,6 +217,7 @@ function EntryForm({ open, onClose, initial, samples }: { open: boolean; onClose
 function EntryCard({ e, samples, onEdit }: { e: ResearchEntry; samples: SoilSample[]; onEdit: () => void }) {
   const [del, setDel] = useState(false);
   const feedback = useSaveFeedback();
+  const guard = useEditGuard();
   const subject = e.kind === "soil" ? samples.find((s) => s.id === e.subjectId)?.name : e.kind === "classroom" ? MAIN_CLASSROOM.name : null;
   const rows: [string, string][] = [
     ["Болжам", e.hypothesis],
@@ -249,10 +255,10 @@ function EntryCard({ e, samples, onEdit }: { e: ResearchEntry; samples: SoilSamp
           ))}
       </dl>
       <div className="mt-3 flex gap-2">
-        <button type="button" className="btn btn-ghost !min-h-9 !px-3 text-sm" onClick={onEdit}>
+        <button type="button" className="btn btn-ghost !min-h-9 !px-3 text-sm" onClick={guard(onEdit)}>
           <Pencil size={15} aria-hidden /> Өңдеу
         </button>
-        <button type="button" className="btn btn-danger !min-h-9 !px-3 text-sm" onClick={() => setDel(true)}>
+        <button type="button" className="btn btn-danger !min-h-9 !px-3 text-sm" onClick={guard(() => setDel(true))}>
           <Trash2 size={15} aria-hidden /> Жою
         </button>
       </div>
@@ -263,7 +269,7 @@ function EntryCard({ e, samples, onEdit }: { e: ResearchEntry; samples: SoilSamp
         footer={
           <>
             <button type="button" className="btn btn-ghost" onClick={() => setDel(false)}>Бас тарту</button>
-            <button type="button" className="btn btn-danger" onClick={() => (feedback(repositories.journal.remove(e.id), "Жазба жойылды"), setDel(false))}>Иә, жою</button>
+            <button type="button" className="btn btn-danger" onClick={() => (void feedback(repositories.journal.remove(e.id), "Жазба жойылды"), setDel(false))}>Иә, жою</button>
           </>
         }
       >
@@ -279,6 +285,7 @@ export function ResearchJournal() {
   const samples = useMemo(() => [...userSamples, ...DEMO_SOIL_SAMPLES], [userSamples]);
   const [editing, setEditing] = useState<ResearchEntry | null | "new">(null);
   const [soilOpen, setSoilOpen] = useState(false);
+  const guard = useEditGuard();
   const sorted = [...entries].sort((a, b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt));
   const userSorted = [...userSamples].sort((a, b) => b.collectedAt.localeCompare(a.collectedAt));
 
@@ -292,7 +299,7 @@ export function ResearchJournal() {
           <h2 id="entries-title" className="font-serif text-2xl font-bold text-forest">
             Зерттеу жазбалары ({entries.length})
           </h2>
-          <button type="button" className="btn btn-primary" onClick={() => setEditing("new")}>
+          <button type="button" className="btn btn-primary" onClick={guard(() => setEditing("new"))}>
             <PlusCircle size={18} aria-hidden /> Жаңа жазба
           </button>
         </div>
@@ -314,7 +321,7 @@ export function ResearchJournal() {
           <h2 id="soil-entries-title" className="font-serif text-2xl font-bold text-forest">
             Топырақ үлгілері ({userSamples.length})
           </h2>
-          <button type="button" className="btn btn-soft" onClick={() => setSoilOpen(true)}>
+          <button type="button" className="btn btn-soft" onClick={guard(() => setSoilOpen(true))}>
             <PlusCircle size={18} aria-hidden /> Топырақ үлгісін зерттеу
           </button>
         </div>

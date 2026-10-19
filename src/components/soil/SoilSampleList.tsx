@@ -6,7 +6,7 @@ import { regionById } from "@/data/regions";
 import { repositories } from "@/lib/storage/repositories";
 import { formatDate } from "@/lib/time";
 import type { SoilSample } from "@/lib/types";
-import { useSaveFeedback } from "../Providers";
+import { useEditGuard, useSaveFeedback } from "../Providers";
 import { Badge } from "../ui/Badge";
 import { Dialog } from "../ui/Dialog";
 import { SoilSampleForm } from "./SoilSampleForm";
@@ -17,6 +17,7 @@ export function SoilSampleCard({ s, highlight, showRegion }: { s: SoilSample; hi
   const [edit, setEdit] = useState(false);
   const [confirm, setConfirm] = useState(false);
   const feedback = useSaveFeedback();
+  const guard = useEditGuard();
   const isDemo = s.status === "demo";
   return (
     <li id={`sample-${s.id}`} className={`rounded-2xl border bg-white p-3 ${highlight ? "border-forest ring-2 ring-forest/30" : "border-line"}`}>
@@ -75,10 +76,10 @@ export function SoilSampleCard({ s, highlight, showRegion }: { s: SoilSample; hi
       )}
       {!isDemo && (
         <div className="mt-2 flex gap-2">
-          <button type="button" className="btn btn-ghost !min-h-9 !px-3 text-sm" onClick={() => setEdit(true)}>
+          <button type="button" className="btn btn-ghost !min-h-9 !px-3 text-sm" onClick={guard(() => setEdit(true))}>
             <Pencil size={15} aria-hidden /> Өңдеу
           </button>
-          <button type="button" className="btn btn-danger !min-h-9 !px-3 text-sm" onClick={() => setConfirm(true)}>
+          <button type="button" className="btn btn-danger !min-h-9 !px-3 text-sm" onClick={guard(() => setConfirm(true))}>
             <Trash2 size={15} aria-hidden /> Жою
           </button>
         </div>
@@ -97,7 +98,7 @@ export function SoilSampleCard({ s, highlight, showRegion }: { s: SoilSample; hi
               type="button"
               className="btn btn-danger"
               onClick={() => {
-                feedback(repositories.soilSamples.remove(s.id), "Үлгі жойылды");
+                void feedback(repositories.soilSamples.remove(s.id), "Үлгі жойылды");
                 setConfirm(false);
               }}
             >
@@ -106,7 +107,7 @@ export function SoilSampleCard({ s, highlight, showRegion }: { s: SoilSample; hi
           </>
         }
       >
-        <p>«{s.name}» үлгісі осы браузерден біржола жойылады.</p>
+        <p>«{s.name}» үлгісі біржола жойылады.</p>
       </Dialog>
     </li>
   );

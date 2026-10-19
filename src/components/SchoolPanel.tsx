@@ -4,7 +4,7 @@ import { ArrowRight, BookOpen, MapPin, PlusCircle } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import type { School } from "@/lib/types";
-import { useDataMode } from "./Providers";
+import { useDataMode, useEditGuard } from "./Providers";
 import { ClassroomPhoto } from "./school/ClassroomPhoto";
 import { CO2_NOTE, DataMeta } from "./school/ClassroomMonitor";
 import { DataModeSwitch } from "./sensors/DataModeSwitch";
@@ -22,6 +22,7 @@ export function SchoolPanel({ school }: { school: School }) {
   const { mode } = useDataMode();
   const { readings, events } = useClassroomReadings(classroom.id, mode);
   const [formOpen, setFormOpen] = useState(false);
+  const guard = useEditGuard();
   const lastDay = readings.length ? localDayKey(readings[readings.length - 1].timestamp) : null;
 
   return (
@@ -60,7 +61,7 @@ export function SchoolPanel({ school }: { school: School }) {
         ) : (
           <div className="rounded-2xl border border-dashed border-line bg-white px-4 py-4">
             <p className="font-semibold">Өлшем енгізілмеген</p>
-            <button type="button" className="btn btn-primary mt-2" onClick={() => setFormOpen(true)}>
+            <button type="button" className="btn btn-primary mt-2" onClick={guard(() => setFormOpen(true))}>
               <PlusCircle size={18} aria-hidden /> Өлшем енгізу
             </button>
           </div>

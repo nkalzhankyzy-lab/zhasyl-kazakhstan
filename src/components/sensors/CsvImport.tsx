@@ -7,7 +7,7 @@ import { formatValue } from "@/lib/metrics";
 import { useCollection } from "@/lib/storage/hooks";
 import { newId, repositories } from "@/lib/storage/repositories";
 import { formatDateTime, TZ_LABEL } from "@/lib/time";
-import { useSaveFeedback } from "../Providers";
+import { useEditGuard, useSaveFeedback } from "../Providers";
 import { Dialog } from "../ui/Dialog";
 
 export function CsvImport({ classroomId }: { classroomId: string }) {
@@ -20,6 +20,8 @@ export function CsvImport({ classroomId }: { classroomId: string }) {
   const [confirmReplace, setConfirmReplace] = useState(false);
   const existing = useCollection(repositories.readings).filter((r) => r.classroomId === classroomId && r.status === "user");
   const feedback = useSaveFeedback();
+  const guard = useEditGuard();
+  const [saving, setSaving] = useState(false);
 
   const reset = () => {
     setPreview(null);
@@ -49,7 +51,8 @@ export function CsvImport({ classroomId }: { classroomId: string }) {
   const bad = preview?.rows.filter((r) => !r.reading) ?? [];
   const toImport = [...ok, ...(includeWarnings ? warn : [])].map((r) => r.reading!);
 
-  const doImport = () => {
+  const doImport = async () => {
+    if (saving) return;
     if (mode === "replace" && existing.length && !confirmReplace) {
       setConfirmReplace(true);
       return;
@@ -68,8 +71,11 @@ export function CsvImport({ classroomId }: { classroomId: string }) {
       });
     }
     const others = repositories.readings.list().filter((r) => r.classroomId !== classroomId);
+    setSaving(true);
     const res = mode === "replace" ? repositories.readings.replaceAll([...others, ...items]) : repositories.readings.upsertMany(items);
-    if (feedback(res, `${items.length} жол импортталды${skipped ? `, уақыты қайталанған ${skipped} жол өткізілді` : ""}`)) {
+    const ok = await feedback(res, `${items.length} жол импортталды${skipped ? `, уақыты қайталанған ${skipped} жол өткізілді` : ""}`);
+    setSaving(false);
+    if (ok) {
       setOpen(false);
       reset();
     }
@@ -78,7 +84,7 @@ export function CsvImport({ classroomId }: { classroomId: string }) {
   return (
     <>
       <div className="flex flex-wrap gap-2">
-        <button type="button" className="btn btn-soft" onClick={() => setOpen(true)}>
+        <button type="button" className="btn btn-soft" onClick={guard(() => setOpen(true))}>
           <Upload size={18} aria-hidden /> CSV импорттау
         </button>
         <button type="button" className="btn btn-ghost" onClick={() => downloadText("zhasyl-kazakhstan-ulgi.csv", csvTemplate())}>
@@ -99,8 +105,8 @@ export function CsvImport({ classroomId }: { classroomId: string }) {
               <button type="button" className="btn btn-ghost" onClick={reset}>
                 Басқа файл
               </button>
-              <button type="button" className={confirmReplace ? "btn btn-danger" : "btn btn-primary"} disabled={!toImport.length} onClick={doImport}>
-                {confirmReplace ? `Иә, бар ${existing.length} жазбаны алмастыру` : `${toImport.length} жолды импорттау`}
+              <button type="button" className={confirmReplace ? "btn btn-danger" : "btn btn-primary"} disabled={!toImport.length || saving} onClick={doImport}>
+                {saving ? "Сақталуда…" : confirmReplace ? `Иә, бар ${existing.length} жазбаны алмастыру` : `${toImport.length} жолды импорттау`}
               </button>
             </>
           ) : undefined

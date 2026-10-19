@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { DEMO_SOIL_SAMPLES } from "@/data/demo/soil-samples-demo";
 import { regionById } from "@/data/regions";
 import { useCollection } from "@/lib/storage/hooks";
+import { useEditGuard } from "./Providers";
 import { repositories } from "@/lib/storage/repositories";
 import { formatNumber } from "@/lib/metrics";
 import { formatDate } from "@/lib/time";
@@ -107,6 +108,7 @@ interface Props {
 
 export function RegionPanel({ region, tab, onTab, highlightSampleId }: Props) {
   const [formOpen, setFormOpen] = useState(false);
+  const guard = useEditGuard();
   const userSamples = useCollection(repositories.soilSamples);
   const samples = useMemo(
     () => [...userSamples, ...DEMO_SOIL_SAMPLES].filter((s) => s.regionId === region.id).sort((a, b) => b.collectedAt.localeCompare(a.collectedAt)),
@@ -119,7 +121,7 @@ export function RegionPanel({ region, tab, onTab, highlightSampleId }: Props) {
   }, [highlightSampleId, tab]);
 
   const studyButton = (
-    <button type="button" className="btn btn-primary w-full" onClick={() => setFormOpen(true)}>
+    <button type="button" className="btn btn-primary w-full" onClick={guard(() => setFormOpen(true))}>
       <FlaskConical size={18} aria-hidden />
       Топырақ үлгісін зерттеу
     </button>

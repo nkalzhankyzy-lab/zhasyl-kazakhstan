@@ -1,7 +1,7 @@
 "use client";
 
 import { Camera, Trash2 } from "lucide-react";
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import { REGIONS } from "@/data/regions";
 import { compressImage, dataUrlKb } from "@/lib/image";
 import { parseOptionalNumber } from "@/lib/metrics";
@@ -55,9 +55,10 @@ export function SoilSampleForm({ open, onClose, initial, defaultRegionId, onSave
   const [warnings, setWarnings] = useState<string[]>([]);
   const [photoBusy, setPhotoBusy] = useState(false);
   const feedback = useSaveFeedback();
+  const saving = useRef(false);
   const set = (k: string) => (e: { target: { value: string } }) => setF((x) => ({ ...x, [k]: e.target.value }));
 
-  const submit = (e: FormEvent) => {
+  const submit = async (e: FormEvent) => {
     e.preventDefault();
     const err: Record<string, string> = {};
     const warn: string[] = [];
@@ -103,7 +104,10 @@ export function SoilSampleForm({ open, onClose, initial, defaultRegionId, onSave
       createdAt: initial?.createdAt ?? now,
       updatedAt: now,
     };
-    const ok = feedback(repositories.soilSamples.upsert(sample), initial ? "Үлгі жаңартылды" : "Үлгі сақталды және зерттеу күнделігіне қосылды");
+    if (saving.current) return;
+    saving.current = true;
+    const ok = await feedback(repositories.soilSamples.upsert(sample), initial ? "Үлгі жаңартылды" : "Үлгі сақталды және зерттеу күнделігіне қосылды");
+    saving.current = false;
     if (ok) {
       onSaved?.(sample);
       onClose();

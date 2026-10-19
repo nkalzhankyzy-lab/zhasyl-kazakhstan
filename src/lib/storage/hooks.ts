@@ -1,7 +1,8 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
-import type { CollectionRepository, ValueRepository } from "./repositories";
+import { authStore, type AuthState } from "../supabase/auth";
+import { syncStatus, type CollectionRepository, type SyncState, type ValueRepository } from "./repositories";
 
 const EMPTY: never[] = [];
 const getEmpty = () => EMPTY;
@@ -20,4 +21,14 @@ const noopSubscribe = () => () => {};
 /** Клиентте гидратациядан кейін true. */
 export function useHydrated() {
   return useSyncExternalStore(noopSubscribe, () => true, () => false);
+}
+
+/** Кіру күйі (Supabase режимінде) */
+export function useAuth(): AuthState {
+  return useSyncExternalStore(authStore.subscribe, authStore.get, authStore.getServer);
+}
+
+/** Дерекқормен синхрондау күйі */
+export function useSyncStatus(): SyncState {
+  return useSyncExternalStore(syncStatus.subscribe, syncStatus.get, syncStatus.getServer);
 }

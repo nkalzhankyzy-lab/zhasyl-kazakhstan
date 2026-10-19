@@ -1,10 +1,14 @@
 "use client";
 
-import { BookOpen, Database, FlaskConical, Library, Map as MapIcon, School, Sprout, UserRound } from "lucide-react";
+import { BookOpen, CloudOff, Database, FlaskConical, Library, LogIn, LogOut, Map as MapIcon, School, Sprout, UserRound } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { useAuth, useSyncStatus } from "@/lib/storage/hooks";
+import { signOut } from "@/lib/supabase/auth";
+import { SUPABASE_ENABLED } from "@/lib/supabase/client";
 import { Logo } from "./Logo";
+import { useLogin } from "./Providers";
 
 const NAV = [
   { href: "/", label: "Экокарта", icon: MapIcon },
@@ -23,6 +27,10 @@ export function Header() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const auth = useAuth();
+  const sync = useSyncStatus();
+  const login = useLogin();
+  const userLabel = auth.email ? auth.email.split("@")[0] : "Қонақ";
   useEffect(() => {
     if (!open) return;
     const close = (e: MouseEvent | KeyboardEvent) => {
@@ -74,17 +82,47 @@ export function Header() {
             <span className="flex h-8 w-8 items-center justify-center rounded-full bg-mint-2">
               <UserRound size={18} aria-hidden />
             </span>
-            <span className="hidden sm:inline">Қонақ</span>
+            <span className="hidden max-w-[140px] truncate sm:inline">{userLabel}</span>
+            {sync.state === "error" && <CloudOff size={16} className="text-alert" aria-label="Дерекқормен байланыс жоқ" />}
           </button>
           {open && (
             <div role="menu" className="absolute right-0 mt-2 w-72 rounded-2xl border border-line bg-paper p-2 shadow-lift">
-              <p className="px-3 pb-2 pt-1 text-xs text-muted">Аккаунт жоқ: деректер осы браузерде сақталады.</p>
+              {!SUPABASE_ENABLED ? (
+                <p className="px-3 pb-2 pt-1 text-xs text-muted">Аккаунт жоқ: деректер осы браузерде сақталады.</p>
+              ) : auth.userId ? (
+                <div className="px-3 pb-2 pt-1 text-xs text-muted">
+                  <p className="truncate font-semibold text-ink">{auth.email}</p>
+                  <p>{auth.canEdit ? "Редактор: деректі енгізе аласыз" : "Редакторлар тізімінде жоқсыз: тек көру"}</p>
+                </div>
+              ) : (
+                <p className="px-3 pb-2 pt-1 text-xs text-muted">Деректі көру үшін кірудің қажеті жоқ. Мұғалімдер деректі енгізу үшін кіреді.</p>
+              )}
+              {sync.state === "error" && (
+                <p className="mx-1 mb-2 rounded-xl bg-orange-50 px-3 py-2 text-xs text-orange-950" role="alert">
+                  {sync.message}
+                </p>
+              )}
               {MENU.map(({ href, label, icon: Icon }) => (
                 <Link key={href} role="menuitem" href={href} onClick={() => setOpen(false)} className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-[15px] font-medium hover:bg-mint">
                   <Icon size={18} className="text-forest" aria-hidden />
                   {label}
                 </Link>
               ))}
+              {SUPABASE_ENABLED && (
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setOpen(false);
+                    if (auth.userId) void signOut();
+                    else login();
+                  }}
+                  className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-[15px] font-medium hover:bg-mint"
+                >
+                  {auth.userId ? <LogOut size={18} className="text-forest" aria-hidden /> : <LogIn size={18} className="text-forest" aria-hidden />}
+                  {auth.userId ? "Шығу" : "Мұғалім ретінде кіру"}
+                </button>
+              )}
             </div>
           )}
         </div>
