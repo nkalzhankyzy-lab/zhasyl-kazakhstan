@@ -36,7 +36,8 @@ function limited(ip: string) {
 const fail = (status: number, error: string) => Response.json({ error }, { status });
 
 export async function POST(request: Request) {
-  const key = process.env.GEMINI_API_KEY;
+  // Көшіргенде қосылып кететін бос орын мен тырнақшаны алып тастаймыз
+  const key = process.env.GEMINI_API_KEY?.trim().replace(/^["']+|["']+$/g, "");
   if (!key) return fail(503, "ЖИ көмекші әлі қосылмаған: серверде GEMINI_API_KEY бапталмаған.");
 
   const ip = request.headers.get("x-forwarded-for")?.split(",")[0].trim() || "local";
@@ -81,9 +82,17 @@ export async function POST(request: Request) {
   if (!res.ok) {
     const detail = await res.text().catch(() => "");
     console.error("Gemini error", res.status, detail.slice(0, 500));
-    if (res.status === 429) return fail(429, "ЖИ қызметінің лимиті таусылды. Біраздан кейін қайталап көріңіз.");
-    if (res.status === 400 || res.status === 401 || res.status === 403) return fail(502, "ЖИ қызметі кілтті қабылдамады. Мұғалім GEMINI_API_KEY мәнін тексеруі керек.");
-    return fail(502, "ЖИ қызметі уақытша жауап бермей тұр. Қайталап көріңіз.");
+    // Google қатесінің қысқа түсіндірмесі (кілттің өзі онда болмайды) — себебін анықтау үшін
+    let reason = "";
+    try {
+      const e = (JSON.parse(detail) as { error?: { status?: string; message?: string } }).error;
+      reason = [e?.status, e?.message].filter(Boolean).join(": ").replace(/key=[^&\s]+/g, "key=…").slice(0, 240);
+    } catch {}
+    const tail = ` [Google ${res.status}${reason ? `: ${reason}` : ""}]`;
+    if (res.status === 429) return fail(429, "ЖИ қызметінің лимиті таусылды. Біраздан кейін қайталап көріңіз." + tail);
+    if (res.status === 404) return fail(502, `«${MODEL}» моделі табылмады. GEMINI_MODEL мәнін тексеру керек.` + tail);
+    if (res.status === 400 || res.status === 401 || res.status === 403) return fail(502, "ЖИ қызметі сұрауды қабылдамады." + tail);
+    return fail(502, "ЖИ қызметі уақытша жауап бермей тұр. Қайталап көріңіз." + tail);
   }
 
   type Part = { text?: string; thought?: boolean };
