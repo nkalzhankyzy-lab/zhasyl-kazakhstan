@@ -16,13 +16,13 @@ create or replace function public.zk_is_editor()
 returns boolean
 language sql
 stable
-security definer
+security invoker -- zk_editors RLS ережесі пайдаланушыға өз жолын ғана көрсетеді
 set search_path = ''
 as $$
   select exists (select 1 from public.zk_editors where user_id = (select auth.uid()));
 $$;
-revoke all on function public.zk_is_editor() from public;
-grant execute on function public.zk_is_editor() to anon, authenticated;
+revoke all on function public.zk_is_editor() from public, anon;
+grant execute on function public.zk_is_editor() to authenticated;
 
 create or replace function public.zk_touch_updated_at()
 returns trigger

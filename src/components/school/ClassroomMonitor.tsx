@@ -7,7 +7,7 @@ import { downloadText, readingsToCsv } from "@/lib/csv";
 import { METRICS } from "@/lib/metrics";
 import { formatDateTime, formatDayKey, localDayKey, TZ_LABEL } from "@/lib/time";
 import type { Classroom, MetricKey } from "@/lib/types";
-import { useHydrated } from "@/lib/storage/hooks";
+import { useHydrated, useSyncStatus } from "@/lib/storage/hooks";
 import { STORAGE_WHERE } from "@/lib/supabase/client";
 import { useDataMode, useEditGuard } from "../Providers";
 import { CsvImport } from "../sensors/CsvImport";
@@ -56,6 +56,8 @@ export function ClassroomMonitor({ classroom }: { classroom: Classroom }) {
   const [dayPick, setDayPick] = useState<string | null>(null);
   const day = dayPick && days.includes(dayPick) ? dayPick : days[days.length - 1];
   const empty = readings.length === 0;
+  const sync = useSyncStatus();
+  const loadingUser = mode === "user" && empty && sync.state === "loading";
   // Күн/уақыт пішімі браузердің тілдік параметрлеріне байланысты — гидратациядан кейін ғана сызамыз
   const hydrated = useHydrated();
   if (!hydrated) {
@@ -84,7 +86,11 @@ export function ClassroomMonitor({ classroom }: { classroom: Classroom }) {
 
       <DataMeta readings={readings} mode={mode} />
 
-      {empty ? (
+      {loadingUser ? (
+        <p className="rounded-2xl border border-dashed border-line bg-white px-5 py-6 text-muted" aria-busy="true">Өлшемдер дерекқордан жүктелуде…</p>
+      ) : mode === "user" && empty && sync.state === "error" ? (
+        <p className="rounded-2xl bg-orange-50 px-5 py-4 text-orange-950" role="alert">{sync.message}</p>
+      ) : empty ? (
         <div className="flex flex-col items-start gap-3 rounded-2xl border border-dashed border-line bg-white px-5 py-6">
           <p className="text-lg font-semibold">Өлшем енгізілмеген</p>
           <p className="text-sm text-muted">Датчик көрсеткішін қолмен енгізіңіз немесе CSV файлын импорттаңыз. Деректер {STORAGE_WHERE} сақталады.</p>
