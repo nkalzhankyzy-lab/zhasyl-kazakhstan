@@ -70,7 +70,7 @@ const fail = (status: number, error: string) => Response.json({ error }, { statu
 export async function POST(request: Request) {
   // Көшіргенде қосылып кететін бос орын мен тырнақшаны алып тастаймыз
   // Көшіргенде қосылып кететін бос орын, тырнақша және «GEMINI_API_KEY=» бөлігін алып тастаймыз
-  const key = process.env.GEMINI_API_KEY?.trim().replace(/^GEMINI_API_KEY\s*=\s*/, "").replace(/^["']+|["']+$/g, "").trim();
+  const key = process.env.GEMINI_API_KEY?.trim().replace(/^GEMINI_API_KEY\s*[=:]\s*/i, "").replace(/^[^A-Za-z0-9]+|[^A-Za-z0-9_.-]+$/g, "");
   if (!key) return fail(503, "ЖИ көмекші әлі қосылмаған: серверде GEMINI_API_KEY бапталмаған.");
 
   const ip = request.headers.get("x-forwarded-for")?.split(",")[0].trim() || "local";
