@@ -19,10 +19,10 @@ export default function HomePage() {
         </h2>
         <ul className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
           <li>
-            <FeatureCard href="/garden" title="Менің жасыл бағым" subtitle="Өсімдік таңдау және өсіру" image="/images/garden.png" alt="Ағаш жәшіктердегі көкөніс пен гүлдер өсетін күнді экологиялық бақ" badge="Әзірленуде" />
+            <FeatureCard href="/garden" title="Менің жасыл бағым" subtitle="Гүлдердің өсу күнделігі" image="/images/garden.png" alt="Ағаш жәшіктердегі көкөніс пен гүлдер өсетін күнді экологиялық бақ" />
           </li>
           <li>
-            <FeatureCard href="/lab" title="Био-химиялық зертхана" subtitle="Тәжірибелер мен өлшемдер" image="/images/laboratory.png" alt="Микроскоп, колбалар мен өсімдік үлгілері бар жарық зертхана" badge="Әзірленуде" />
+            <FeatureCard href="/lab" title="Био-химиялық зертхана" subtitle="Нұсқаулықтар және салыстыру" image="/images/laboratory.png" alt="Микроскоп, колбалар мен өсімдік үлгілері бар жарық зертхана" />
           </li>
           <li>
             <FeatureCard href="/schools/kzo-23" title="Мектеп экопаспорты" subtitle="№23 мектеп-лицей, Қызылорда" image="/images/classroom.png" alt="Қабырғасында датчигі бар, өсімдіктер қойылған жарық биология кабинеті" />

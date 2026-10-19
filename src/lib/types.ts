@@ -174,4 +174,30 @@ export interface ResearchEntry {
   updatedAt: string;
 }
 
+/** «Менің гүлім»: бір бақылау жазбасы */
+export interface PlantLog {
+  id: string;
+  /** YYYY-MM-DD */
+  date: string;
+  heightCm: number | null;
+  leaves: number | null;
+  watered: boolean;
+  note: string;
+}
+
+/** Сыныптағы (немесе үйдегі) нақты гүл */
+export interface GardenPlant {
+  id: string;
+  status: DataStatus;
+  name: string;
+  location: string;
+  /** YYYY-MM-DD */
+  plantedAt: string;
+  photo: string | null;
+  notes: string;
+  logs: PlantLog[];
+  createdAt: string;
+  updatedAt: string;
+}
+
 export type MetricKey = "co2Ppm" | "temperatureC" | "humidityPct" | "pm25UgM3";
