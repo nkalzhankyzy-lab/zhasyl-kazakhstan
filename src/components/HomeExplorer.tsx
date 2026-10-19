@@ -59,10 +59,10 @@ export function HomeExplorer() {
         </h2>
         <div className="flex flex-wrap items-center justify-between gap-2">
           <MapLayerSwitch value={layer} onChange={(l) => setLayer(l)} />
-          <label className="flex items-center gap-2 text-sm">
+          <label className="flex min-w-0 max-w-full items-center gap-2 text-sm">
             <span className="font-semibold text-muted">Аймақ:</span>
             <select
-              className="input !min-h-10 !w-auto !py-1.5"
+              className="input !min-h-10 !w-auto min-w-0 max-w-full !py-1.5"
               value={sel.kind === "region" ? sel.id : ""}
               onChange={(e) => e.target.value && selectRegion(e.target.value)}
               aria-label="Аймақты тізімнен таңдау"

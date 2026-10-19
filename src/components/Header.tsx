@@ -1,6 +1,6 @@
 "use client";
 
-import { BookOpen, CloudOff, Database, FlaskConical, Library, LogIn, LogOut, Map as MapIcon, School, Sprout, UserRound } from "lucide-react";
+import { BookOpen, Bot, CloudOff, Database, FlaskConical, Library, LogIn, LogOut, Map as MapIcon, School, Sprout, UserRound } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -10,11 +10,12 @@ import { SUPABASE_ENABLED } from "@/lib/supabase/client";
 import { Logo } from "./Logo";
 import { useLogin } from "./Providers";
 
-const NAV = [
+const NAV: { href: string; label: string; short?: string; icon: typeof MapIcon }[] = [
   { href: "/", label: "Экокарта", icon: MapIcon },
-  { href: "/garden", label: "Менің бағым", icon: Sprout },
+  { href: "/garden", label: "Менің бағым", short: "Бағым", icon: Sprout },
   { href: "/lab", label: "Зертхана", icon: FlaskConical },
   { href: "/schools", label: "Мектептер", icon: School },
+  { href: "/ai", label: "ЖИ көмекші", short: "ЖИ", icon: Bot },
 ];
 
 const MENU = [
@@ -53,25 +54,26 @@ export function Header() {
           <Logo />
           <span className="font-serif text-xl font-bold text-forest sm:text-2xl">Жасыл Қазақстан</span>
         </Link>
-        <nav aria-label="Негізгі мәзір" className="ml-auto hidden md:block">
+        <nav aria-label="Негізгі мәзір" className="ml-auto hidden lg:block">
           <ul className="flex items-center gap-1">
-            {NAV.map(({ href, label, icon: Icon }) => (
+            {NAV.map(({ href, label, short, icon: Icon }) => (
               <li key={href}>
                 <Link
                   href={href}
                   aria-current={isActive(href) ? "page" : undefined}
-                  className={`flex items-center gap-2 rounded-xl px-3.5 py-2 text-[15px] font-semibold transition ${
+                  className={`flex items-center gap-2 whitespace-nowrap rounded-xl px-2.5 py-2 text-[15px] lg:px-3.5 font-semibold transition ${
                     isActive(href) ? "bg-mint-2 text-forest shadow-sm" : "text-ink/80 hover:bg-mint"
                   }`}
                 >
                   <Icon size={18} aria-hidden />
-                  {label}
+                  <span className="xl:hidden">{short ?? label}</span>
+                  <span className="hidden xl:inline">{label}</span>
                 </Link>
               </li>
             ))}
           </ul>
         </nav>
-        <div className="relative ml-auto md:ml-2" ref={menuRef}>
+        <div className="relative ml-auto lg:ml-2" ref={menuRef}>
           <button
             type="button"
             onClick={() => setOpen((o) => !o)}
@@ -128,19 +130,19 @@ export function Header() {
         </div>
       </div>
       {/* Телефондағы мәзір */}
-      <nav aria-label="Негізгі мәзір (телефон)" className="border-t border-line/60 md:hidden">
-        <ul className="grid grid-cols-4">
-          {NAV.map(({ href, label, icon: Icon }) => (
+      <nav aria-label="Негізгі мәзір (телефон)" className="border-t border-line/60 lg:hidden">
+        <ul className="grid grid-cols-5">
+          {NAV.map(({ href, label, short, icon: Icon }) => (
             <li key={href}>
               <Link
                 href={href}
                 aria-current={isActive(href) ? "page" : undefined}
-                className={`flex flex-col items-center gap-0.5 px-1 py-1.5 text-[12px] font-semibold ${isActive(href) ? "text-forest" : "text-muted"}`}
+                className={`flex flex-col items-center gap-0.5 px-0.5 py-1.5 text-[11.5px] font-semibold ${isActive(href) ? "text-forest" : "text-muted"}`}
               >
                 <span className={`flex h-7 w-12 items-center justify-center rounded-full ${isActive(href) ? "bg-mint-2" : ""}`}>
                   <Icon size={18} aria-hidden />
                 </span>
-                {label}
+                <span className="truncate">{short ?? label}</span>
               </Link>
             </li>
           ))}

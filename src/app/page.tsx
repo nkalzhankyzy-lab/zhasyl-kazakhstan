@@ -28,7 +28,7 @@ export default function HomePage() {
             <FeatureCard href="/schools/kzo-23" title="Мектеп экопаспорты" subtitle="№23 мектеп-лицей, Қызылорда" image="/images/classroom.png" alt="Қабырғасында датчигі бар, өсімдіктер қойылған жарық биология кабинеті" />
           </li>
           <li>
-            <FeatureCard href="/ai" title="ЖИ экокеңесші" subtitle="Деректерді бірге талдаймыз" image="/images/ai-assistant.png" alt="Қолында көшеті бар мейірімді эко-робот" badge="Келесі кезеңде" imageFit="contain" />
+            <FeatureCard href="/ai" title="ЖИ экокеңесші" subtitle="Сұрақ қойыңыз, деректі бірге талдаймыз" image="/images/ai-assistant.png" alt="Қолында көшеті бар мейірімді эко-робот" imageFit="contain" />
           </li>
         </ul>
       </section>

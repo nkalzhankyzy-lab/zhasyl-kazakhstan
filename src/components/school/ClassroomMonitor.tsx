@@ -78,7 +78,7 @@ export function ClassroomMonitor({ classroom }: { classroom: Classroom }) {
       </div>
 
       {mode === "demo" && (
-        <div className="sticky top-[118px] z-20 flex flex-wrap items-center gap-2 rounded-2xl border border-amber-300 bg-amber-50/95 px-4 py-2.5 shadow-sm backdrop-blur md:top-[72px]" role="note">
+        <div className="sticky top-[118px] z-20 flex flex-wrap items-center gap-2 rounded-2xl border border-amber-300 bg-amber-50/95 px-4 py-2.5 shadow-sm backdrop-blur lg:top-[72px]" role="note">
           <DemoBadge />
           <span className="text-sm text-amber-950">{DEMO_SCENARIO_TEXT}</span>
         </div>
