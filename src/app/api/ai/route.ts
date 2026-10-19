@@ -1,8 +1,40 @@
 import { platformKnowledge } from "@/lib/ai/knowledge";
 
 // Gemini кілті тек серверде: GEMINI_API_KEY (Vercel → Settings → Environment Variables).
-const MODEL = process.env.GEMINI_MODEL || "gemini-flash-latest";
-const API_BASE = process.env.GEMINI_API_BASE || "https://generativelanguage.googleapis.com/v1beta";
+// Екі түрлі кілт бар: Google AI Studio (әдетте «AIza…») және Vertex AI express («AQ.…»).
+// Кілт түріне қарай сәйкес мекенжай алдымен, екіншісі қосалқы ретінде сыналады.
+const MODEL = process.env.GEMINI_MODEL;
+const STUDIO_BASE = process.env.GEMINI_API_BASE || "https://generativelanguage.googleapis.com/v1beta";
+const VERTEX_BASE = process.env.VERTEX_API_BASE || "https://aiplatform.googleapis.com/v1/publishers/google";
+const STUDIO_MODELS = MODEL ? [MODEL] : ["gemini-flash-latest", "gemini-2.5-flash"];
+const VERTEX_MODELS = MODEL ? [MODEL] : ["gemini-2.5-flash", "gemini-3-flash-preview", "gemini-2.0-flash"];
+
+type Attempt = { label: string; model: string; url: string; headers: Record<string, string> };
+function attempts(key: string): Attempt[] {
+  const studio = STUDIO_MODELS.map((model) => ({
+    label: "AI Studio",
+    model,
+    url: `${STUDIO_BASE}/models/${encodeURIComponent(model)}:generateContent`,
+    headers: { "x-goog-api-key": key },
+  }));
+  const vertex = VERTEX_MODELS.map((model) => ({
+    label: "Vertex AI",
+    model,
+    url: `${VERTEX_BASE}/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(key)}`,
+    headers: {},
+  }));
+  return key.startsWith("AQ.") ? [...vertex, ...studio] : [...studio, ...vertex];
+}
+
+function googleReason(detail: string) {
+  try {
+    const e = (JSON.parse(detail) as { error?: { status?: string; message?: string } | { status?: string; message?: string }[] }).error;
+    const err = Array.isArray(e) ? e[0] : e;
+    return [err?.status, err?.message].filter(Boolean).join(": ").replace(/key=[^&\s]+/g, "key=…").slice(0, 200);
+  } catch {
+    return "";
+  }
+}
 
 const MAX_MESSAGES = 12;
 const MAX_CHARS = 2000;
@@ -63,36 +95,47 @@ export async function POST(request: Request) {
   // Gemini диалогы user хабарламасынан басталуы керек
   while (messages.length && messages[0].role !== "user") messages.shift();
 
-  let res: Response;
-  try {
-    res = await fetch(`${API_BASE}/models/${encodeURIComponent(MODEL)}:generateContent`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "x-goog-api-key": key },
-      body: JSON.stringify({
-        systemInstruction: { parts: [{ text: systemText }] },
-        contents: messages.map((m) => ({ role: m.role === "assistant" ? "model" : "user", parts: [{ text: m.content }] })),
-        generationConfig: { temperature: 0.4, maxOutputTokens: 4096 },
-      }),
-      signal: AbortSignal.timeout(30_000),
-    });
-  } catch {
-    return fail(502, "ЖИ қызметіне қосылу мүмкін болмады. Интернетті тексеріп, қайталап көріңіз.");
+  const payload = JSON.stringify({
+    systemInstruction: { parts: [{ text: systemText }] },
+    contents: messages.map((m) => ({ role: m.role === "assistant" ? "model" : "user", parts: [{ text: m.content }] })),
+    generationConfig: { temperature: 0.4, maxOutputTokens: 4096 },
+  });
+
+  let res: Response | null = null;
+  const errors: { status: number; text: string }[] = [];
+  for (const a of attempts(key)) {
+    let r: Response;
+    try {
+      r = await fetch(a.url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...a.headers },
+        body: payload,
+        signal: AbortSignal.timeout(30_000),
+      });
+    } catch {
+      errors.push({ status: 0, text: `${a.label} ${a.model}: байланыс жоқ` });
+      continue;
+    }
+    if (r.ok) {
+      res = r;
+      break;
+    }
+    const detail = await r.text().catch(() => "");
+    console.error("Gemini error", a.label, a.model, r.status, detail.slice(0, 500));
+    errors.push({ status: r.status, text: `${a.label} ${a.model} ${r.status}${googleReason(detail) ? ": " + googleReason(detail) : ""}` });
+    // Лимит немесе Google жағындағы ақау — басқа мекенжайды сынаудың мәні жоқ
+    if (r.status === 429 || r.status >= 500) break;
   }
 
-  if (!res.ok) {
-    const detail = await res.text().catch(() => "");
-    console.error("Gemini error", res.status, detail.slice(0, 500));
-    // Google қатесінің қысқа түсіндірмесі (кілттің өзі онда болмайды) — себебін анықтау үшін
-    let reason = "";
-    try {
-      const e = (JSON.parse(detail) as { error?: { status?: string; message?: string } }).error;
-      reason = [e?.status, e?.message].filter(Boolean).join(": ").replace(/key=[^&\s]+/g, "key=…").slice(0, 240);
-    } catch {}
-    const tail = ` [Google ${res.status}${reason ? `: ${reason}` : ""}]`;
-    if (res.status === 429) return fail(429, "ЖИ қызметінің лимиті таусылды. Біраздан кейін қайталап көріңіз." + tail);
-    if (res.status === 404) return fail(502, `«${MODEL}» моделі табылмады. GEMINI_MODEL мәнін тексеру керек.` + tail);
-    if (res.status === 400 || res.status === 401 || res.status === 403) return fail(502, "ЖИ қызметі сұрауды қабылдамады." + tail);
-    return fail(502, "ЖИ қызметі уақытша жауап бермей тұр. Қайталап көріңіз." + tail);
+  if (!res) {
+    const last = errors[errors.length - 1];
+    // Ең пайдалы түсіндірме — 404-тен өзге алғашқы қате
+    const main = errors.find((e) => e.status !== 404 && e.status !== 0) ?? errors[0];
+    const tail = main ? ` [${main.text}]` : "";
+    if (!last || errors.every((e) => e.status === 0)) return fail(502, "ЖИ қызметіне қосылу мүмкін болмады. Интернетті тексеріп, қайталап көріңіз.");
+    if (last.status === 429) return fail(429, "ЖИ қызметінің лимиті таусылды. Біраздан кейін қайталап көріңіз." + tail);
+    if (last.status >= 500) return fail(502, "ЖИ қызметі уақытша жауап бермей тұр. Қайталап көріңіз." + tail);
+    return fail(502, "ЖИ қызметі сұрауды қабылдамады." + tail);
   }
 
   type Part = { text?: string; thought?: boolean };
