@@ -7,7 +7,7 @@
 
 import type { PostgrestError, SupabaseClient } from "@supabase/supabase-js";
 import { getSupabase, SUPABASE_ENABLED } from "../supabase/client";
-import type { GardenPlant, ResearchEntry, Room, YardItem, SensorReading, SoilSample } from "../types";
+import type { GardenPlant, Lesson, ResearchEntry, Room, YardItem, SensorReading, SoilSample } from "../types";
 import { localStore, STORAGE_PREFIX, type SaveResult } from "./kv";
 
 type Listener = () => void;
@@ -388,6 +388,7 @@ export const repositories = {
   garden: collection<GardenPlant>("garden-plants", { table: "zk_garden_plants", orderBy: "created_at" }),
   rooms: collection<Room>("rooms", { table: "zk_rooms", orderBy: "created_at" }),
   yard: collection<YardItem>("yard-items", { table: "zk_yard_items", orderBy: "created_at" }),
+  lessons: collection<Lesson>("lessons", { table: "zk_lessons", orderBy: "created_at" }),
   classroomPhoto(classroomId: string) {
     let r = photoRepos.get(classroomId);
     if (!r) {
@@ -430,13 +431,14 @@ export async function exportAllUserData() {
     gardenPlants: repositories.garden.list(),
     rooms: repositories.rooms.list(),
     yardItems: repositories.yard.list(),
+    lessons: repositories.lessons.list(),
     classroomPhotos: await allPhotos(),
   };
 }
 
 /** Барлық пайдаланушы дерегін өшіру (растаудан кейін ғана шақырылады). */
 export async function deleteAllUserData(): Promise<SaveResult> {
-  const repos = [repositories.soilSamples, repositories.readings, repositories.journal, repositories.garden, repositories.rooms, repositories.yard] as unknown as CollectionRepository<{ id: string }>[];
+  const repos = [repositories.soilSamples, repositories.readings, repositories.journal, repositories.garden, repositories.rooms, repositories.yard, repositories.lessons] as unknown as CollectionRepository<{ id: string }>[];
   for (const repo of repos) {
     const res = await repo.replaceAll([]);
     if (!res.ok) return res;

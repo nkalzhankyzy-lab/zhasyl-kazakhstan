@@ -255,4 +255,29 @@ export interface YardItem {
   updatedAt: string;
 }
 
+/** Сабақ журналының жазбасы (экопаспорт) */
+export interface Lesson {
+  id: string;
+  status: DataStatus;
+  roomId: string;
+  /** YYYY-MM-DD */
+  date: string;
+  /** HH:MM */
+  time: string;
+  subject: string;
+  className: string;
+  pupils: number;
+  durationMin: number;
+  tStart: number | null;
+  rhStart: number | null;
+  tEnd: number | null;
+  rhEnd: number | null;
+  co2Start: number | null;
+  co2End: number | null;
+  ventilation: "closed" | "vent" | "break";
+  note: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export type MetricKey = "co2Ppm" | "temperatureC" | "humidityPct" | "pm25UgM3";

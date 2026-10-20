@@ -4,6 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ClassroomMonitor } from "@/components/school/ClassroomMonitor";
 import { ClassroomPhoto } from "@/components/school/ClassroomPhoto";
+import { EcoPassport } from "@/components/school/EcoPassport";
 import { SCHOOLS, schoolById } from "@/data/schools";
 
 export function generateStaticParams() {
@@ -32,7 +33,10 @@ export default async function SchoolPage({ params }: { params: Promise<{ id: str
           <MapPin size={16} className="mt-0.5 shrink-0" aria-hidden /> {school.location.note}
         </p>
       </header>
-      <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
+      <div className="mt-6">
+        <EcoPassport />
+      </div>
+      <div className="mt-10 grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
         <aside className="flex flex-col gap-3">
           <h2 className="font-serif text-2xl font-bold text-forest">{classroom.name}</h2>
           <ClassroomPhoto classroom={classroom} />
