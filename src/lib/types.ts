@@ -275,6 +275,9 @@ export interface Lesson {
   co2Start: number | null;
   co2End: number | null;
   ventilation: "closed" | "vent" | "break";
+  /** Сыртқы ауа (Open-Meteo, сабақ ортасындағы сағат). Ескі жазбаларда жоқ — бетте автоматты алынады. */
+  tOut?: number | null;
+  rhOut?: number | null;
   note: string;
   createdAt: string;
   updatedAt: string;

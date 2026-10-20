@@ -20,21 +20,52 @@ export const CO2_SOURCE_LABEL: Record<Co2Source, string> = {
   model: "көлем мен желдету арқылы",
 };
 
+/**
+ * Ылғалдылық арқылы CO₂ бағасы.
+ * Сыртқы ауаның абсолютті ылғалдылығы белгілі болса, су буының балансынан бөлменің нақты
+ * ауа алмасуын (λ, сағ⁻¹) табамыз да, CO₂-ні сол λ-мен есептейміз:
+ *   W(t) = Wс + (W₀ − Wс)·e^(−λt),  Wс = Wсырт + S/(λV),  S = N·40 г/сағ.
+ * Сыртқы дерек жоқ болса — бұрынғы қарапайым үлес әдісі.
+ */
+export function co2FromHumidity(p: { n: number; v: number; tHours: number; c0: number; w0: number; w1: number; wOut?: number | null }): { value: number; ach: number | null } | null {
+  const added = (p.w1 - p.w0) * p.v;
+  const S = p.n * WATER_G_H;
+  const sealed = co2At(p.tHours, { n: p.n, g: CO2_L_H, v: p.v, c0: 0, ach: 0 });
+  if (p.wOut !== null && p.wOut !== undefined && p.wOut < p.w0) {
+    const wAt = (lam: number) => {
+      if (lam < 1e-6) return p.w0 + (S * p.tHours) / p.v;
+      const ws = p.wOut! + S / (lam * p.v);
+      return ws + (p.w0 - ws) * Math.exp(-lam * p.tHours);
+    };
+    let lam: number;
+    if (p.w1 >= wAt(0)) lam = 0;
+    else if (p.w1 <= wAt(20)) lam = 20;
+    else {
+      let lo = 0, hi = 20;
+      for (let i = 0; i < 60; i++) {
+        const mid = (lo + hi) / 2;
+        if (wAt(mid) > p.w1) lo = mid;
+        else hi = mid;
+      }
+      lam = (lo + hi) / 2;
+    }
+    return { value: co2At(p.tHours, { n: p.n, g: CO2_L_H, v: p.v, c0: p.c0, ach: lam }), ach: lam };
+  }
+  if (added <= 0) return null;
+  return { value: p.c0 + Math.min(added / (S * p.tHours), 1) * sealed, ach: null };
+}
+
 /** Сабақ соңындағы CO₂: өлшенген → ылғалдылық арқылы → көлем мен желдету моделі */
-export function lessonCo2(l: Lesson, room: Room | undefined): { value: number; source: Co2Source } | null {
+export function lessonCo2(l: Lesson, room: Room | undefined): { value: number; source: Co2Source; ach?: number | null } | null {
   if (l.co2End !== null) return { value: l.co2End, source: "measured" };
   if (!room) return null;
   const v = roomVolume(room);
   const t = l.durationMin / 60;
   const c0 = l.co2Start ?? (l.ventilation === "break" ? 420 : 550);
   if (l.tStart !== null && l.rhStart !== null && l.tEnd !== null && l.rhEnd !== null) {
-    const added = (absHumidity(l.tEnd, l.rhEnd) - absHumidity(l.tStart, l.rhStart)) * v;
-    const expected = l.pupils * WATER_G_H * t;
-    if (added > 0) {
-      const share = Math.min(added / expected, 1);
-      const sealed = co2At(t, { n: l.pupils, g: CO2_L_H, v, c0: 0, ach: 0 });
-      return { value: Math.round(c0 + share * sealed), source: "humidity" };
-    }
+    const wOut = l.tOut != null && l.rhOut != null ? absHumidity(l.tOut, l.rhOut) : null;
+    const h = co2FromHumidity({ n: l.pupils, v, tHours: t, c0, w0: absHumidity(l.tStart, l.rhStart), w1: absHumidity(l.tEnd, l.rhEnd), wOut });
+    if (h) return { value: Math.round(h.value), source: "humidity", ach: h.ach };
   }
   return { value: Math.round(co2At(t, { n: l.pupils, g: CO2_L_H, v, c0, ach: ACH[l.ventilation] })), source: "model" };
 }
@@ -95,7 +126,7 @@ export function lessonsContext(rooms: Room[], lessons: Lesson[]): string {
     for (const l of lessons.filter((x) => x.roomId === r.id).slice(-6)) {
       const c = lessonCo2(l, r);
       lines.push(
-        `  · ${l.date} ${l.time}, ${l.subject}, ${l.className}, ${l.pupils} оқушы, ${l.durationMin} мин, ${VENT_LABEL[l.ventilation]}; T ${l.tStart ?? "—"}→${l.tEnd ?? "—"} °C, RH ${l.rhStart ?? "—"}→${l.rhEnd ?? "—"}%; CO₂ ≈ ${c?.value ?? "—"} ppm (${c ? CO2_SOURCE_LABEL[c.source] : "—"})`,
+        `  · ${l.date} ${l.time}, ${l.subject}, ${l.className}, ${l.pupils} оқушы, ${l.durationMin} мин, ${VENT_LABEL[l.ventilation]}; сыртта ${l.tOut != null ? `${Math.round(l.tOut)} °C, ${Math.round(l.rhOut ?? 0)}%` : "—"}; T ${l.tStart ?? "—"}→${l.tEnd ?? "—"} °C, RH ${l.rhStart ?? "—"}→${l.rhEnd ?? "—"}%; CO₂ ≈ ${c?.value ?? "—"} ppm (${c ? CO2_SOURCE_LABEL[c.source] : "—"})`,
       );
     }
   }

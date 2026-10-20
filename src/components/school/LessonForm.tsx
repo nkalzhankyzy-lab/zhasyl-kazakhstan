@@ -1,9 +1,10 @@
 "use client";
 
-import { useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { parseOptionalNumber } from "@/lib/metrics";
 import { newId, repositories } from "@/lib/storage/repositories";
 import { todayLocalDate } from "@/lib/time";
+import { fetchOutdoorRange, lessonHourKey, WEATHER_PLACE, WEATHER_SOURCE } from "@/lib/weather";
 import type { Lesson, Room } from "@/lib/types";
 import { useSaveFeedback } from "../Providers";
 import { Dialog } from "../ui/Dialog";
@@ -28,11 +29,33 @@ export function LessonForm({ open, onClose, rooms, initial, roomId }: { open: bo
     co2Start: s(initial?.co2Start),
     co2End: s(initial?.co2End),
     ventilation: initial?.ventilation ?? ("break" as Lesson["ventilation"]),
+    tOut: s(initial?.tOut),
+    rhOut: s(initial?.rhOut),
     note: initial?.note ?? "",
   }));
   const [err, setErr] = useState<string | null>(null);
   const feedback = useSaveFeedback();
   const saving = useRef(false);
+  // Сыртқы ауа райын күн мен сағатқа қарай автоматты толтыру (қолмен өзгертуге болады)
+  const [auto, setAuto] = useState<"idle" | "loading" | "ok" | "none">("idle");
+  const touchedOut = useRef(Boolean(initial?.tOut != null));
+  useEffect(() => {
+    if (touchedOut.current || !/^\d{4}-\d{2}-\d{2}$/.test(f.date) || !/^\d{1,2}:\d{2}$/.test(f.time)) return;
+    let alive = true;
+    setAuto("loading");
+    const dur = Number(f.durationMin) || 45;
+    void fetchOutdoorRange(f.date, f.date).then((m) => {
+      if (!alive || touchedOut.current) return;
+      const o = m[lessonHourKey(f.date, f.time, dur)];
+      if (o) {
+        setF((x) => ({ ...x, tOut: String(Math.round(o.t * 10) / 10), rhOut: String(Math.round(o.rh)) }));
+        setAuto("ok");
+      } else setAuto("none");
+    });
+    return () => {
+      alive = false;
+    };
+  }, [f.date, f.time, f.durationMin]);
   const set = (k: keyof typeof f) => (e: { target: { value: string } }) => setF((x) => ({ ...x, [k]: e.target.value }));
 
   async function submit(e: FormEvent) {
@@ -55,6 +78,8 @@ export function LessonForm({ open, onClose, rooms, initial, roomId }: { open: bo
       rhEnd: num(f.rhEnd, "Ылғалдылық (соңы)", 1, 100),
       co2Start: num(f.co2Start, "CO₂ (басы)", 300, 10000, true),
       co2End: num(f.co2End, "CO₂ (соңы)", 300, 10000, true),
+      tOut: num(f.tOut, "Сыртқы температура", -50, 55),
+      rhOut: num(f.rhOut, "Сыртқы ылғалдылық", 1, 100),
     };
     for (const v of Object.values(vals)) if (typeof v === "string") return setErr(v);
     if (vals.pupils === null) return setErr("Оқушы санын жазыңыз");
@@ -80,6 +105,8 @@ export function LessonForm({ open, onClose, rooms, initial, roomId }: { open: bo
       co2Start: n.co2Start,
       co2End: n.co2End,
       ventilation: f.ventilation,
+      tOut: n.tOut,
+      rhOut: n.rhOut,
       note: f.note.trim(),
       createdAt: initial?.createdAt ?? now,
       updatedAt: now,
@@ -164,6 +191,28 @@ export function LessonForm({ open, onClose, rooms, initial, roomId }: { open: bo
             {field("tEnd", "Соңында, °C")}
             {field("rhEnd", "Соңында, RH %")}
           </div>
+        </fieldset>
+        <fieldset className="rounded-xl border border-line p-3">
+          <legend className="px-1 text-sm font-semibold text-forest">Сыртқы ауа</legend>
+          <div className="grid grid-cols-2 gap-2">
+            <label className="text-xs text-muted">
+              Температура, °C
+              <input className="input mt-1 !min-h-10" inputMode="decimal" value={f.tOut} onChange={(e) => ((touchedOut.current = true), set("tOut")(e))} />
+            </label>
+            <label className="text-xs text-muted">
+              Ылғалдылық, %
+              <input className="input mt-1 !min-h-10" inputMode="decimal" value={f.rhOut} onChange={(e) => ((touchedOut.current = true), set("rhOut")(e))} />
+            </label>
+          </div>
+          <p className="mt-1 text-xs text-muted" aria-live="polite">
+            {auto === "loading"
+              ? "Ауа райы жүктелуде…"
+              : auto === "ok"
+                ? `${WEATHER_PLACE}, сабақ уақытындағы ауа райы (${WEATHER_SOURCE}) автоматты толтырылды.`
+                : auto === "none"
+                  ? "Бұл күннің ауа райы табылмады, қолмен жазыңыз немесе бос қалдырыңыз."
+                  : "Сырттағы ауа құрғақ болса, CO₂ бағасы дәлірек шығады."}
+          </p>
         </fieldset>
         <fieldset className="rounded-xl border border-line p-3">
           <legend className="px-1 text-sm font-semibold text-forest">CO₂ өлшегіш болса</legend>

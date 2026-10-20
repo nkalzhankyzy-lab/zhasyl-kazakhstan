@@ -4,6 +4,7 @@ import { Award, ClipboardList, Pencil, Plus, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { CartesianGrid, LabelList, ResponsiveContainer, Scatter, ScatterChart, Tooltip, XAxis, YAxis, ZAxis } from "recharts";
 import { useCollection, useHydrated } from "@/lib/storage/hooks";
+import { lessonHourKey, useOutdoor, WEATHER_PLACE, WEATHER_SOURCE } from "@/lib/weather";
 import { repositories } from "@/lib/storage/repositories";
 import { formatDate } from "@/lib/time";
 import type { Lesson, Room } from "@/lib/types";
@@ -113,6 +114,17 @@ function LessonRow({ lesson, room, rooms }: { lesson: Lesson; room?: Room; rooms
         </span>
       </td>
       <td className="whitespace-nowrap px-2 py-2">
+        {lesson.tOut != null ? (
+          <>
+            {nv(Math.round(lesson.tOut * 10) / 10)} °C
+            <br />
+            <span className="text-muted">{nv(Math.round(lesson.rhOut ?? 0))}%</span>
+          </>
+        ) : (
+          <span className="text-muted">—</span>
+        )}
+      </td>
+      <td className="whitespace-nowrap px-2 py-2">
         {nv(lesson.tStart)} → {nv(lesson.tEnd)} °C
         <br />
         {nv(lesson.rhStart)} → {nv(lesson.rhEnd)}%
@@ -178,7 +190,18 @@ export function EcoPassport() {
   const [addOpen, setAddOpen] = useState(false);
   const [filter, setFilter] = useState("all");
   const rooms = useMemo(() => allRooms.filter((r) => r.status === "user").sort((a, b) => a.createdAt.localeCompare(b.createdAt)), [allRooms]);
-  const lessons = useMemo(() => allLessons.filter((l) => l.status === "user").sort((a, b) => `${a.date}${a.time}`.localeCompare(`${b.date}${b.time}`)), [allLessons]);
+  const baseLessons = useMemo(() => allLessons.filter((l) => l.status === "user").sort((a, b) => `${a.date}${a.time}`.localeCompare(`${b.date}${b.time}`)), [allLessons]);
+  // Сыртқы ауа райы енгізілмеген сабақтарға Open-Meteo-дан сол сағаттың дерегін қосамыз
+  const outdoor = useOutdoor(baseLessons.filter((l) => l.tOut == null).map((l) => l.date));
+  const lessons = useMemo(
+    () =>
+      baseLessons.map((l) => {
+        if (l.tOut != null) return l;
+        const o = outdoor[lessonHourKey(l.date, l.time, l.durationMin)];
+        return o ? { ...l, tOut: o.t, rhOut: o.rh } : l;
+      }),
+    [baseLessons, outdoor],
+  );
   const ranked = useMemo(() => rooms.map((r) => ({ room: r, score: greenScore(r, lessons) })).sort((a, b) => b.score.total - a.score.total), [rooms, lessons]);
   const shown = (filter === "all" ? lessons : lessons.filter((l) => l.roomId === filter)).slice().reverse();
   const scatter = ranked.filter((x) => x.score.avgRh !== null).map((x) => ({ x: Math.round(plantsPer10m2(x.room) * 10) / 10, y: x.score.avgRh, name: x.room.name.replace(/ кабинеті.*$/, "") }));
@@ -252,7 +275,7 @@ export function EcoPassport() {
                 </li>
               </ul>
               <p className="rounded-xl bg-sand-2/60 px-3 py-2 text-sm text-bark">
-                CO₂ өлшегіш болмаса, сабақ соңындағы CO₂ ылғалдылықтың өсуі арқылы, ол да болмаса кабинет көлемі мен желдету арқылы бағаланады. Сондықтан бұл — болжам.
+                CO₂ өлшегіш болмаса, сабақ соңындағы CO₂ ылғалдылықтың өсуі арқылы, ол да болмаса кабинет көлемі мен желдету арқылы бағаланады. Сондықтан бұл — болжам. Сыртқы ауа ({WEATHER_PLACE}, {WEATHER_SOURCE}) сабақ күні мен сағаты бойынша автоматты алынады: сыртта ауа құрғақ болса, терезеден шыққан су буы ескеріліп, CO₂ дәлірек бағаланады.
               </p>
               <AskAi
                 label="ЖИ: қорытынды мен ұсыныс"
@@ -281,13 +304,14 @@ export function EcoPassport() {
             </div>
             {shown.length ? (
               <div className="card relative overflow-x-auto p-0">
-                <table className="w-full min-w-[720px] text-sm">
+                <table className="w-full min-w-[800px] text-sm">
                   <thead>
                     <tr className="border-b border-line text-left text-xs text-muted">
                       <th className="px-3 py-2 font-medium">Күні</th>
                       <th className="px-2 py-2 font-medium">Кабинет</th>
                       <th className="px-2 py-2 font-medium">Сабақ</th>
-                      <th className="px-2 py-2 font-medium">T / ылғалдылық</th>
+                      <th className="px-2 py-2 font-medium">Сыртта</th>
+                      <th className="px-2 py-2 font-medium">Кабинетте: T / ылғалдылық</th>
                       <th className="px-2 py-2 font-medium">CO₂ (соңында)</th>
                       <th className="px-3 py-2 font-medium">
                         <span className="sr-only">Әрекеттер</span>

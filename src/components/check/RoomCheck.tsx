@@ -1,8 +1,10 @@
 "use client";
 
-import { AlertTriangle, CheckCircle2, Info, QrCode } from "lucide-react";
+import { AlertTriangle, CheckCircle2, CloudSun, Info, QrCode } from "lucide-react";
 import { useState } from "react";
 import { parseOptionalNumber } from "@/lib/metrics";
+import { useCurrentOutdoor, ventTipForOutdoor, WEATHER_PLACE, WEATHER_SOURCE } from "@/lib/weather";
+import { co2FromHumidity } from "../school/lessonMath";
 import { AskAi } from "../ai/AskAi";
 import { absHumidity, co2At } from "../school/Co2Estimator";
 import { Dialog } from "../ui/Dialog";
@@ -16,7 +18,6 @@ const WINDOWS = [
 type WinId = (typeof WINDOWS)[number]["id"];
 
 const CO2_L_H = 18; // бір адам, л/сағ (отырған ересек/жасөспірім, шамамен)
-const WATER_G_H = 40; // бір адам, г/сағ су буы (шамамен)
 
 const fmt = (n: number, d = 0) => n.toLocaleString("ru-RU", { maximumFractionDigits: d, minimumFractionDigits: d });
 
@@ -53,6 +54,8 @@ export function RoomCheck({ qrSrc }: { qrSrc: string }) {
   const [win, setWin] = useState<WinId>("closed");
   const [f, setF] = useState({ a: "8", b: "6", h: "3", n: "25", plants: "3", min: "45", t1: "", rh1: "", t2: "", rh2: "", co2: "" });
   const [qr, setQr] = useState(false);
+  const outdoor = useCurrentOutdoor();
+  const out = outdoor && outdoor !== "error" ? outdoor : null;
   const set = (k: keyof typeof f) => (v: string) => setF((s) => ({ ...s, [k]: v }));
   const num = (k: keyof typeof f) => parseOptionalNumber(f[k]);
 
@@ -84,9 +87,8 @@ export function RoomCheck({ qrSrc }: { qrSrc: string }) {
     const to1000 = minutesTo(1000, { n, v, c0, ach });
     let humCo2: number | null = null;
     if ([t1, rh1, t2, rh2].every((x) => x !== null && Number.isFinite(x))) {
-      const added = (absHumidity(t2!, rh2!) - absHumidity(t1!, rh1!)) * v;
-      const expected = n * WATER_G_H * t;
-      if (added > 0) humCo2 = c0 + Math.min(added / expected, 1) * co2At(t, { n, g: CO2_L_H, v, c0: 0, ach: 0 });
+      const hc = co2FromHumidity({ n, v, tHours: t, c0, w0: absHumidity(t1!, rh1!), w1: absHumidity(t2!, rh2!), wOut: out ? absHumidity(out.t, out.rh) : null });
+      if (hc) humCo2 = hc.value;
     }
     const rhNow = rh2 !== null && Number.isFinite(rh2) ? rh2 : rh1 !== null && Number.isFinite(rh1) ? rh1 : null;
     const plantsPer10 = ok(plants) ? (plants / area) * 10 : 0;
@@ -99,6 +101,7 @@ export function RoomCheck({ qrSrc }: { qrSrc: string }) {
         text: `${fmt(min)} минуттан кейін CO₂ шамамен ${fmt(final)} ppm болады — 1000 ppm-нен жоғары. ${to1000 !== null ? `Шамамен әр ${Math.max(5, Math.floor(to1000))} минут сайын` : "Үзіліс сайын"} 5–10 минут желдетіңіз. 1000 ppm кезінде шешім қабылдау тестінің нәтижесі төмендеген (Satish, 2012).`,
       });
     else tips.push({ tone: "good", text: `${fmt(min)} минут ішінде CO₂ шамамен ${fmt(final)} ppm-ге дейін көтеріледі. Бұл 1000 ppm-нен төмен, ауа жеткілікті.` });
+    if (out) tips.push({ tone: "info", text: ventTipForOutdoor(out.t) });
     if (perArea < 2.5) tips.push({ tone: "warn", text: `Бір адамға ${fmt(perArea, 1)} м² келеді. Сынып үшін жиі қолданылатын бағдар — бір оқушыға кемінде 2,5 м². Бөлме бұл адам санына тар.` });
     else tips.push({ tone: "good", text: `Бір адамға ${fmt(perArea, 1)} м² келеді — бұл 2,5 м² бағдарынан көп.` });
     if (rhNow !== null) {
@@ -120,6 +123,7 @@ export function RoomCheck({ qrSrc }: { qrSrc: string }) {
         result.humCo2 !== null ? `Ылғалдылық арқылы бағаланған CO₂ ≈ ${fmt(result.humCo2)} ppm (T ${t1}→${t2} °C, RH ${rh1}→${rh2}%).` : "",
         co2m ? `CO₂ өлшегіш көрсеткіші: ${co2m} ppm.` : "",
         result.rhNow !== null ? `Қазіргі ылғалдылық ${result.rhNow}%.` : "",
+        out ? `Сыртта қазір (${WEATHER_PLACE}): ${out.t} °C, ылғалдылық ${out.rh}%.` : "",
       ]
         .filter(Boolean)
         .join("\n")
@@ -196,6 +200,19 @@ export function RoomCheck({ qrSrc }: { qrSrc: string }) {
         <h2 id="out-title" className="font-serif text-xl font-bold text-forest">
           Нәтиже
         </h2>
+        <p className="flex items-center gap-2 rounded-xl bg-white px-3 py-2 text-sm ring-1 ring-line">
+          <CloudSun size={18} className="shrink-0 text-leaf" aria-hidden />
+          {out ? (
+            <span>
+              Сыртта қазір ({WEATHER_PLACE}): <b>{fmt(out.t, 1)} °C</b>, ылғалдылық <b>{fmt(out.rh)}%</b>
+              <span className="text-xs text-muted"> · {WEATHER_SOURCE}</span>
+            </span>
+          ) : outdoor === "error" ? (
+            <span className="text-muted">Сыртқы ауа райы жүктелмеді. Есептеу онсыз да жұмыс істейді.</span>
+          ) : (
+            <span className="text-muted">Сыртқы ауа райы жүктелуде…</span>
+          )}
+        </p>
         {!result ? (
           <p className="text-muted">Бөлменің өлшемін, адам санын және ұзақтығын толтырыңыз.</p>
         ) : (
