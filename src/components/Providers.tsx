@@ -9,7 +9,7 @@ import { ComingSoonProvider } from "./ComingSoon";
 
 export type DataMode = "demo" | "user";
 
-const ModeCtx = createContext<{ mode: DataMode; setMode: (m: DataMode) => void }>({ mode: "demo", setMode: () => {} });
+const ModeCtx = createContext<{ mode: DataMode; setMode: (m: DataMode) => void }>({ mode: "user", setMode: () => {} });
 
 interface Toast {
   id: number;
@@ -21,8 +21,8 @@ const ToastCtx = createContext<(kind: Toast["kind"], text: string) => void>(() =
 const LoginCtx = createContext<(reason?: string) => void>(() => {});
 
 export function Providers({ children }: { children: ReactNode }) {
-  // Әдепкіде демо режимі — сайтты бірден көрсетуге болады. Режим сақталмайды: әр ашқанда демо.
-  const [mode, setMode] = useState<DataMode>("demo");
+  // Демо режимі алынды: сайт тек мұғалім енгізген деректерді көрсетеді.
+  const [mode, setMode] = useState<DataMode>("user");
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [login, setLogin] = useState<{ reason?: string } | null>(null);
   const openLogin = useCallback((reason?: string) => setLogin({ reason }), []);

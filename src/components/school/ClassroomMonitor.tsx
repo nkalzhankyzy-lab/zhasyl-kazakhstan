@@ -41,7 +41,7 @@ export function DataMeta({ readings, mode, narrow }: { readings: { timestamp: st
       </div>
       <div className="rounded-xl bg-white px-3 py-2 ring-1 ring-line">
         <dt className="text-xs text-muted">Дереккөз</dt>
-        <dd className="font-semibold">{mode === "demo" ? "Алдын ала дайындалған көрсетілім сценарийі" : "Қолмен енгізу және CSV импорт (датчик әлі қосылмаған)"}</dd>
+        <dd className="font-semibold">{mode === "demo" ? "Алдын ала дайындалған көрсетілім сценарийі" : "TA318 термогигрометрі, қолмен енгізілген"}</dd>
       </div>
     </dl>
   );
@@ -50,7 +50,8 @@ export function DataMeta({ readings, mode, narrow }: { readings: { timestamp: st
 export function ClassroomMonitor({ classroom }: { classroom: Classroom }) {
   const { mode } = useDataMode();
   const { readings, events } = useClassroomReadings(classroom.id, mode);
-  const [metric, setMetric] = useState<MetricKey>("co2Ppm");
+  const [metricPick, setMetric] = useState<MetricKey | null>(null);
+  const metric: MetricKey = metricPick ?? (readings.some((r) => r.co2Ppm !== null) ? "co2Ppm" : "temperatureC");
   const [formOpen, setFormOpen] = useState(false);
   const guard = useEditGuard();
   const days = useMemo(() => [...new Set(readings.map((r) => localDayKey(r.timestamp)))].sort(), [readings]);

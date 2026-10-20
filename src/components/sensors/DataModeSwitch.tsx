@@ -2,7 +2,12 @@
 
 import { useDataMode } from "../Providers";
 
+/** Демо режимі алынды — ауыстырғыш енді көрсетілмейді. */
 export function DataModeSwitch() {
+  return null;
+}
+
+export function LegacyDataModeSwitch() {
   const { mode, setMode } = useDataMode();
   const opts = [
     { key: "demo" as const, label: "Демо" },

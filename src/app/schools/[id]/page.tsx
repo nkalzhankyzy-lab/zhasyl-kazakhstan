@@ -36,14 +36,14 @@ export default async function SchoolPage({ params }: { params: Promise<{ id: str
       <div className="mt-6">
         <EcoPassport />
       </div>
-      <div className="mt-10 grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
-        <aside className="flex flex-col gap-3">
+      <div className="mt-10 grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
+        <aside className="flex min-w-0 flex-col gap-3">
           <h2 className="font-serif text-2xl font-bold text-forest">{classroom.name}</h2>
           <ClassroomPhoto classroom={classroom} />
           <Link href="/journal" className="btn btn-soft">
             <BookOpen size={18} aria-hidden /> Зерттеу күнделігі
           </Link>
-          <p className="text-sm text-muted">Нақты датчик қосылмаған. Көрсеткіштер демо сценарийден немесе сіз енгізген өлшемдерден алынады.</p>
+          <p className="text-sm text-muted">Температура мен ылғалдылық TA318 термогигрометрімен өлшеніп, қолмен енгізіледі. CO₂ өлшегіш әлі жоқ, сондықтан CO₂ экопаспортта бағаланады.</p>
         </aside>
         <div className="card p-4 sm:p-5">
           <ClassroomMonitor classroom={classroom} />

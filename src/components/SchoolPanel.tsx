@@ -56,7 +56,7 @@ export function SchoolPanel({ school }: { school: School }) {
               ))}
             </div>
             <p className="text-xs text-muted">{CO2_NOTE}</p>
-            {lastDay && <SensorChart readings={readings} events={events} metric="co2Ppm" day={lastDay} mode={mode} height={210} showSummary={false} />}
+            {lastDay && <SensorChart readings={readings} events={events} metric={readings.some((r) => r.co2Ppm !== null) ? "co2Ppm" : "temperatureC"} day={lastDay} mode={mode} height={210} showSummary={false} />}
           </>
         ) : (
           <div className="rounded-2xl border border-dashed border-line bg-white px-4 py-4">
