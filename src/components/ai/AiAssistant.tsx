@@ -8,6 +8,10 @@ import { useClassroomReadings } from "../sensors/useClassroomReadings";
 import { useDataMode } from "../Providers";
 import { Badge } from "../ui/Badge";
 import { readingsContext } from "./readingsContext";
+import { DEMO_ROOMS } from "@/data/demo/rooms-demo";
+import { useCollection } from "@/lib/storage/hooks";
+import { repositories } from "@/lib/storage/repositories";
+import { roomsContext } from "../garden/roomMath";
 
 type Msg = { role: "user" | "assistant"; content: string };
 
@@ -52,10 +56,11 @@ export function AiAssistant() {
   const [error, setError] = useState<string | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
 
-  const context = useMemo(
-    () => readingsContext(readings, `${MAIN_SCHOOL.shortName}, ${MAIN_CLASSROOM.name}`, mode === "demo"),
-    [readings, mode],
-  );
+  const userRooms = useCollection(repositories.rooms);
+  const context = useMemo(() => {
+    const rooms = mode === "demo" ? DEMO_ROOMS : userRooms.filter((r) => r.status === "user");
+    return `${roomsContext(rooms, mode === "demo")}\n\n${readingsContext(readings, `${MAIN_SCHOOL.shortName}, ${MAIN_CLASSROOM.name}`, mode === "demo")}`;
+  }, [readings, mode, userRooms]);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
@@ -184,7 +189,7 @@ export function AiAssistant() {
           <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-sm text-muted">
             <label className="flex items-center gap-2">
               <input type="checkbox" checked={useData} onChange={(e) => setUseData(e.target.checked)} className="h-4 w-4 accent-[var(--color-forest)]" />
-              Кабинет өлшемдерін ЖИ-ге көрсету
+              Кабинеттер мен өлшемдерді ЖИ-ге көрсету
               <Badge tone={mode === "demo" ? "demo" : "user"}>{mode === "demo" ? "демо дерек" : "нақты дерек"}</Badge>
             </label>
             {messages.length > 0 && (

@@ -38,7 +38,7 @@ function googleReason(detail: string) {
 
 const MAX_MESSAGES = 12;
 const MAX_CHARS = 2000;
-const MAX_CONTEXT = 4000;
+const MAX_CONTEXT = 8000;
 
 const SYSTEM = `Сен — «Жасыл Қазақстан» платформасының ЖИ экокеңесшісісің. Мектеп оқушылары мен мұғалімдерге биология, химия, экология, топырақ, өсімдік және кабинет ауасының сапасы бойынша көмектесесің.
 

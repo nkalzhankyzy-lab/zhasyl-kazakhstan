@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { GardenTracker } from "@/components/garden/GardenTracker";
+import { RoomsSection } from "@/components/garden/RoomsSection";
 import { PlantCatalog } from "@/components/PlantCatalog";
 import { PreviewPage } from "@/components/PreviewPage";
 
@@ -9,7 +10,7 @@ export default function GardenPage() {
   return (
     <PreviewPage
       title="Менің жасыл бағым"
-      lead="Сыныптағы және үйдегі гүлдерді тіркеп, олардың қалай өсіп жатқанын бақылаңыз: суару, биіктік, жапырақ саны. Өлшемдер графикке түседі, ал өсім пайызбен есептеледі."
+      lead="Мектеп кабинеттерін және ондағы гүлдерді тіркеп, салыстырыңыз: көлемі, терезе бағыты, гүл саны. Әр гүлдің өсуін бақылаңыз: суару, биіктік, жапырақ саны."
       image="/images/garden.png"
       alt="Ағаш жәшіктерде көкөніс пен гүлдер өсетін күнді экологиялық бақ"
       featuresTitle="Келесі кезеңде"
@@ -18,6 +19,7 @@ export default function GardenPage() {
         { title: "Виртуалды отырғызу", text: "Таңдалған өсімдікті виртуалды бақ жәшігіне орналастыру және күтім жоспарын құру." },
       ]}
     >
+      <RoomsSection />
       <GardenTracker />
       <section className="card mt-6 p-4 sm:p-6">
         <PlantCatalog />

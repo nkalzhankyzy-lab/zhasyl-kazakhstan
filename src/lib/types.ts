@@ -200,4 +200,36 @@ export interface GardenPlant {
   updatedAt: string;
 }
 
+/** Терезенің қарайтын жағы */
+export type WindowDir = "N" | "NE" | "E" | "SE" | "S" | "SW" | "W" | "NW";
+
+/** Кабинеттегі гүл түрі және саны */
+export interface RoomPlant {
+  id: string;
+  /** Анықтамалықтағы түрдің id-і (src/data/indoor-plants.ts) немесе null — өзі жазылған атау */
+  speciesId: string | null;
+  name: string;
+  count: number;
+  /** YYYY-MM-DD, белгісіз болса бос */
+  plantedAt: string;
+  condition: "good" | "fair" | "poor";
+}
+
+/** Мектептегі кабинет: көлемі, терезе бағыты, гүлдері */
+export interface Room {
+  id: string;
+  status: DataStatus;
+  name: string;
+  floor: number | null;
+  lengthM: number;
+  widthM: number;
+  heightM: number;
+  windowDir: WindowDir | null;
+  windows: number | null;
+  plants: RoomPlant[];
+  notes: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export type MetricKey = "co2Ppm" | "temperatureC" | "humidityPct" | "pm25UgM3";
