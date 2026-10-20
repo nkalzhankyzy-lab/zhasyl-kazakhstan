@@ -1,7 +1,7 @@
 "use client";
 
 import { Calculator, Info } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { CartesianGrid, Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { parseOptionalNumber } from "@/lib/metrics";
 
@@ -162,6 +162,8 @@ export function Co2Estimator() {
             </p>
           )}
 
+          <HumidityCheck n={nums.n!} min={nums.min!} v={calc.v} c0={nums.c0!} sealedRise={co2At(nums.min! / 60, { n: nums.n!, g: nums.g!, v: calc.v, c0: 0, ach: 0 })} />
+
           <p className="rounded-xl bg-sand-2/60 px-3 py-2 text-sm text-bark">
             <b>Математика:</b>{" "}
             {ach === 0 ? (
@@ -183,5 +185,79 @@ export function Co2Estimator() {
         </>
       ) : null}
     </section>
+  );
+}
+
+/** Абсолют ылғалдылық, г/м³ (Магнус формуласы) */
+export function absHumidity(t: number, rh: number) {
+  const es = 6.112 * Math.exp((17.67 * t) / (t + 243.5)); // гПа
+  return (es * rh * 2.1674) / (273.15 + t);
+}
+
+const WATER_PER_PERSON = 40; // г/сағ, отырған адамның дем мен терімен шығаратын су буы (шамамен)
+
+function HumidityCheck({ n, min, v, c0, sealedRise }: { n: number; min: number; v: number; c0: number; sealedRise: number }) {
+  const [h, setH] = useState({ t1: "", rh1: "", t2: "", rh2: "" });
+  const t1 = parseOptionalNumber(h.t1);
+  const rh1 = parseOptionalNumber(h.rh1);
+  const t2 = parseOptionalNumber(h.t2);
+  const rh2 = parseOptionalNumber(h.rh2);
+  const all = [t1, rh1, t2, rh2];
+  const filled = all.every((x) => x !== null);
+  const invalid = filled && (all.some((x) => Number.isNaN(x)) || [rh1!, rh2!].some((x) => x < 1 || x > 100) || [t1!, t2!].some((x) => x < -10 || x > 50));
+
+  let body: ReactNode = <span className="text-muted">Сабақ басындағы және соңындағы температура мен ылғалдылықты енгізіңіз (TA318 сияқты термогигрометрден).</span>;
+  if (invalid) body = <span className="text-alert">Температура −10…50 °C, ылғалдылық 1…100% аралығында болуы керек.</span>;
+  else if (filled) {
+    const a1 = absHumidity(t1!, rh1!);
+    const a2 = absHumidity(t2!, rh2!);
+    const added = (a2 - a1) * v; // г
+    const expected = n * WATER_PER_PERSON * (min / 60); // г, ауа мүлдем алмаспаса
+    if (added <= 0) {
+      body = (
+        <>
+          Ауадағы су буы: {fmt(a1, 1)} → {fmt(a2, 1)} г/м³. Ылғал өспеген, демек ауа жақсы алмасқан (немесе жылыту ауаны құрғатқан). Бұл жағдайда CO₂-ні ылғал арқылы бағалау мүмкін емес.
+        </>
+      );
+    } else {
+      const share = Math.min(added / expected, 1);
+      const rise = share * sealedRise;
+      body = (
+        <>
+          Ауадағы су буы: {fmt(a1, 1)} → {fmt(a2, 1)} г/м³, яғни сыныпқа <b>≈ {fmt(added)} г</b> су буы қосылды. Ауа мүлдем алмаспаса, {fmt(n)} адам {fmt(min)} минутта ≈ {fmt(expected)} г шығарар еді. Сонда шыққан ылғалдың <b>≈ {fmt(share * 100)}%</b> сыныпта қалған.
+          <br />
+          CO₂ де дәл осылай демнен шығады, сондықтан ол да осы үлеске жуық өседі: {fmt(c0)} + {fmt(share * 100)}% × {fmt(sealedRise)} ≈ <b>{fmt(Math.round((c0 + rise) / 10) * 10)} ppm</b>.
+          {added / expected > 1.2 && " (Ылғал күтілгеннен көп өскен: басқа ылғал көзі болуы мүмкін — су, гүлдерді суару, дымқыл киім.)"}
+        </>
+      );
+    }
+  }
+
+  return (
+    <div className="rounded-xl border border-line bg-white p-3">
+      <p className="text-sm font-semibold text-forest">Ылғалдылық арқылы тексеру: ауа қаншалықты алмасты?</p>
+      <p className="mt-1 text-xs text-muted">
+        Демде CO₂-мен бірге су буы да шығады. Ылғалдылық қанша өскенін өлшеп, шыққан будың қаншасы сыныпта қалғанын табамыз. Сол үлесті CO₂-ге қолданамыз.
+      </p>
+      <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
+        {(
+          [
+            ["t1", "Басында, °C"],
+            ["rh1", "Басында, RH %"],
+            ["t2", "Соңында, °C"],
+            ["rh2", "Соңында, RH %"],
+          ] as const
+        ).map(([k, label]) => (
+          <label key={k} className="text-xs text-muted">
+            {label}
+            <input className="input mt-1 !min-h-10" inputMode="decimal" value={h[k]} onChange={(e) => setH({ ...h, [k]: e.target.value })} />
+          </label>
+        ))}
+      </div>
+      <p className="mt-2 text-[15px]" aria-live="polite">{body}</p>
+      <p className="mt-2 text-xs text-muted">
+        Шамамен бағалау: қабырға, жиһаз, өсімдіктер ылғалдың бір бөлігін сіңіреді, сондықтан нақты CO₂ бұдан сәл жоғары болуы мүмкін. Терезе жабық кезде өлшеңіз. Бір адам сағатына ≈ {WATER_PER_PERSON} г су буын шығарады деп алынды.
+      </p>
+    </div>
   );
 }
