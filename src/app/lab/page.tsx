@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { LabGuides } from "@/components/lab/LabGuides";
 import { SoilCompare } from "@/components/lab/SoilCompare";
+import { WorldResearch } from "@/components/lab/WorldResearch";
 import { PreviewPage } from "@/components/PreviewPage";
 
 export const metadata: Metadata = { title: "Био-химиялық зертхана" };
@@ -11,7 +12,7 @@ export default function LabPage() {
   return (
     <PreviewPage
       title="Био-химиялық зертхана"
-      lead="Топырақ үлгісін зерттеудің қадамдық нұсқаулықтары, ылғалдылық калькуляторы және енгізілген үлгілерді салыстыру. Өлшемдерді «Зерттеу күнделігіне» енгізесіз, ал мұнда оларды қатар көресіз."
+      lead="Топырақ үлгісін зерттеудің қадамдық нұсқаулықтары, ылғалдылық калькуляторы, енгізілген үлгілерді салыстыру және кабинет ауасы мен бөлме гүлдері туралы әлемдік зерттеулер."
       image="/images/laboratory.png"
       alt="Микроскоп, колбалар және өсімдік үлгілері бар жарық био-химиялық зертхана"
       featuresTitle="Келесі кезеңде"
@@ -38,6 +39,7 @@ export default function LabPage() {
       </section>
       <LabGuides />
       <SoilCompare />
+      <WorldResearch />
     </PreviewPage>
   );
 }

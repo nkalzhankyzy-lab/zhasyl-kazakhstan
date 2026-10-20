@@ -51,7 +51,7 @@ export function AskAi({
     <div className="flex flex-col gap-2">
       <button
         type="button"
-        className="btn btn-ghost !min-h-10 self-start"
+        className="btn btn-ghost !min-h-10 max-w-full self-start whitespace-normal text-left"
         onClick={() => void ask()}
         disabled={busy}
         aria-busy={busy}
