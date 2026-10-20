@@ -18,6 +18,7 @@ import { SensorCard } from "../sensors/SensorCard";
 import { SensorChart } from "../sensors/SensorChart";
 import { latestValue, useClassroomReadings } from "../sensors/useClassroomReadings";
 import { DemoBadge } from "../ui/Badge";
+import { Co2Estimator } from "./Co2Estimator";
 
 export const CO2_NOTE = "CO₂ — желдетуді бағалауға көмектесетін жанама көрсеткіш.";
 
@@ -171,6 +172,7 @@ export function ClassroomMonitor({ classroom }: { classroom: Classroom }) {
           Өз өлшемдеріңізді енгізу үшін жоғарыдан «Мен енгізген өлшемдер» режимін таңдаңыз. Демо деректер өңделмейді және экспортталмайды.
         </p>
       )}
+      <Co2Estimator />
       {formOpen && <MeasurementForm open={formOpen} onClose={() => setFormOpen(false)} classroomId={classroom.id} onSaved={(r) => setDayPick(localDayKey(r.timestamp))} />}
     </section>
   );
