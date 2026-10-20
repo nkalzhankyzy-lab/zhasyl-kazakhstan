@@ -20,14 +20,11 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { DEMO_GARDEN } from "@/data/demo/garden-demo";
 import { useCollection, useHydrated, useSyncStatus } from "@/lib/storage/hooks";
 import { repositories } from "@/lib/storage/repositories";
 import { formatDate, todayLocalDate } from "@/lib/time";
 import type { GardenPlant } from "@/lib/types";
-import { useDataMode, useEditGuard, useSaveFeedback } from "../Providers";
-import { DataModeSwitch } from "../sensors/DataModeSwitch";
-import { Badge, DemoBadge } from "../ui/Badge";
+import { useEditGuard, useSaveFeedback } from "../Providers";
 import { Dialog } from "../ui/Dialog";
 import { daysBetween, growth, lastWatered, sortedLogs } from "./gardenMath";
 import { LogForm, PlantForm } from "./PlantForms";
@@ -155,10 +152,7 @@ function PlantCard({ plant }: { plant: GardenPlant }) {
           </div>
         )}
         <div className="min-w-0">
-          <Badge tone={isDemo ? "demo" : "user"}>
-            {isDemo ? "ДЕМО — нақты бақылау емес" : "Мен енгізген"}
-          </Badge>
-          <h3 className="mt-1 text-lg font-semibold text-ink">{plant.name}</h3>
+          <h3 className="text-lg font-semibold text-ink">{plant.name}</h3>
           <p className="text-sm text-muted">
             {plant.location ? `${plant.location} · ` : ""}
             {formatDate(plant.plantedAt)}
@@ -327,7 +321,6 @@ function PlantCard({ plant }: { plant: GardenPlant }) {
 }
 
 export function GardenTracker() {
-  const { mode } = useDataMode();
   const user = useCollection(repositories.garden);
   const sync = useSyncStatus();
   const guard = useEditGuard();
@@ -335,12 +328,10 @@ export function GardenTracker() {
   const hydrated = useHydrated();
   const plants = useMemo(
     () =>
-      mode === "demo"
-        ? DEMO_GARDEN
-        : [...user]
-            .filter((p) => p.status === "user")
-            .sort((a, b) => a.createdAt.localeCompare(b.createdAt)),
-    [mode, user],
+      [...user]
+        .filter((p) => p.status === "user")
+        .sort((a, b) => a.plantedAt.localeCompare(b.plantedAt)),
+    [user],
   );
 
   return (
@@ -361,21 +352,14 @@ export function GardenTracker() {
             жапырақ саны.
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <DataModeSwitch />
-          {mode === "user" && (
-            <button
-              type="button"
-              className="btn btn-primary"
-              onClick={guard(() => setAddOpen(true))}
-            >
-              <Plus size={18} aria-hidden /> Гүл қосу
-            </button>
-          )}
-        </div>
+        <button
+          type="button"
+          className="btn btn-primary"
+          onClick={guard(() => setAddOpen(true))}
+        >
+          <Plus size={18} aria-hidden /> Гүл қосу
+        </button>
       </div>
-
-      {mode === "demo" && <DemoBadge className="self-start" />}
 
       {!hydrated ? (
         <p className="text-muted">Жүктелуде…</p>

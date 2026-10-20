@@ -8,7 +8,7 @@ import { useClassroomReadings } from "../sensors/useClassroomReadings";
 import { useDataMode } from "../Providers";
 import { Badge } from "../ui/Badge";
 import { readingsContext } from "./readingsContext";
-import { DEMO_ROOMS } from "@/data/demo/rooms-demo";
+import { yardContext } from "../garden/yardMath";
 import { useCollection } from "@/lib/storage/hooks";
 import { repositories } from "@/lib/storage/repositories";
 import { roomsContext } from "../garden/roomMath";
@@ -26,7 +26,7 @@ const SUGGESTIONS = [
 function inline(text: string): ReactNode[] {
   return text.split(/(\*\*[^*]+\*\*)/g).map((p, i) => (p.startsWith("**") && p.endsWith("**") ? <strong key={i}>{p.slice(2, -2)}</strong> : <Fragment key={i}>{p.replace(/\*/g, "")}</Fragment>));
 }
-function Formatted({ text }: { text: string }) {
+export function Formatted({ text }: { text: string }) {
   const blocks: ReactNode[] = [];
   let list: string[] = [];
   const flush = () => {
@@ -57,10 +57,11 @@ export function AiAssistant() {
   const endRef = useRef<HTMLDivElement>(null);
 
   const userRooms = useCollection(repositories.rooms);
+  const yard = useCollection(repositories.yard);
   const context = useMemo(() => {
-    const rooms = mode === "demo" ? DEMO_ROOMS : userRooms.filter((r) => r.status === "user");
-    return `${roomsContext(rooms, mode === "demo")}\n\n${readingsContext(readings, `${MAIN_SCHOOL.shortName}, ${MAIN_CLASSROOM.name}`, mode === "demo")}`;
-  }, [readings, mode, userRooms]);
+    const rooms = userRooms.filter((r) => r.status === "user");
+    return `${roomsContext(rooms, false)}\n\n${yardContext(yard.filter((i) => i.status === "user"))}\n\n${readingsContext(readings, `${MAIN_SCHOOL.shortName}, ${MAIN_CLASSROOM.name}`, mode === "demo")}`;
+  }, [readings, mode, userRooms, yard]);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });

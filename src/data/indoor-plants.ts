@@ -16,8 +16,8 @@ export interface IndoorPlant {
 export const INDOOR_PLANTS: IndoorPlant[] = [
   { id: "chlorophytum", name: "Хлорофитум", latin: "Chlorophytum comosum", light: ["partial", "bright"], care: "Күтімі оңай, жиі суаруды ұнатады. Тікелей ыстық күнде жапырақ ұшы қурайды." },
   { id: "sansevieria", name: "Сансевиерия", latin: "Dracaena trifasciata", light: ["shade", "partial", "bright"], care: "Өте төзімді, сирек суарылады. Көлеңкеде де өседі." },
-  { id: "zamioculcas", name: "Замиокулькас", latin: "Zamioculcas zamiifolia", light: ["shade", "partial"], care: "Көлеңкеге төзімді, артық суаруды көтермейді." },
-  { id: "spathiphyllum", name: "Спатифиллум", latin: "Spathiphyllum", light: ["shade", "partial"], care: "Ылғалды ұнатады, тікелей күннен қорғау керек." },
+  { id: "zamioculcas", name: "Замиокулькас (доллар ағашы)", latin: "Zamioculcas zamiifolia", light: ["shade", "partial"], care: "Көлеңкеге төзімді, артық суаруды көтермейді." },
+  { id: "spathiphyllum", name: "Спатифиллум (әйел бақыты)", latin: "Spathiphyllum", light: ["shade", "partial"], care: "Ылғалды ұнатады, тікелей күннен қорғау керек." },
   { id: "epipremnum", name: "Эпипремнум (сциндапсус)", latin: "Epipremnum aureum", light: ["shade", "partial"], care: "Шырмалғыш, көлеңкеге төзімді, тез өседі." },
   { id: "aloe", name: "Алоэ", latin: "Aloe vera", light: ["bright"], care: "Күн сүйгіш суккулент, сирек суарылады." },
   { id: "cactus", name: "Кактус", latin: "Cactaceae", light: ["bright"], care: "Ең жарық терезеге қойылады, қыста өте сирек суарылады." },
@@ -30,6 +30,9 @@ export const INDOOR_PLANTS: IndoorPlant[] = [
   { id: "begonia", name: "Бегония", latin: "Begonia", light: ["partial"], care: "Шашыраңқы жарық, жапыраққа су тигізбеу керек." },
   { id: "saintpaulia", name: "Фиалка (сенполия)", latin: "Saintpaulia", light: ["partial"], care: "Тікелей күн тиіп кетсе, жапырағы күйеді." },
   { id: "nephrolepis", name: "Папоротник (нефролепис)", latin: "Nephrolepis exaltata", light: ["shade", "partial"], care: "Ылғалды ауаны ұнатады, құрғақ ауада жапырағы сарғаяды." },
+  { id: "schefflera", name: "Шефлера", latin: "Schefflera arboricola", light: ["partial", "bright"], care: "Шашыраңқы жарықты ұнатады, бұтақтанып өсуі үшін ұшын қиып отыру керек." },
+  { id: "lucky-bamboo", name: "Бамбук (драцена Сандера)", latin: "Dracaena sanderiana", light: ["shade", "partial"], care: "Суда немесе топырақта өседі, тікелей күн тимеуі керек. Суын аптасына бір ауыстырады." },
+  { id: "lalagul", name: "Лалагүл", latin: "", light: ["bright"], care: "Пиязшықты гүл: жарық терезеге қойылады, гүлдегеннен кейін тыныштық кезеңі болады." },
   { id: "hedera", name: "Шырмауық (плющ)", latin: "Hedera helix", light: ["shade", "partial"], care: "Салқын жерді ұнатады, ыстықта нашар өседі." },
 ];
 

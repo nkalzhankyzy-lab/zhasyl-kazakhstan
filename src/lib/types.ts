@@ -227,6 +227,29 @@ export interface Room {
   windowDir: WindowDir | null;
   windows: number | null;
   plants: RoomPlant[];
+  /** Сабаққа әдетте кіретін оқушы саны */
+  pupils?: number | null;
+  /** Мектеп картасындағы орны (src/data/school-map.ts ROOM_SPOTS id-і) */
+  mapSpot?: string | null;
+  notes: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** Мектеп ауласындағы ағаштар, бұталар, гүлзарлар тобы */
+export interface YardItem {
+  id: string;
+  status: DataStatus;
+  kind: "tree" | "shrub" | "flowers";
+  name: string;
+  count: number;
+  plantedYear: number | null;
+  condition: "good" | "fair" | "poor";
+  /** Карта координаттары (viewBox 0 0 480 600) және таралу радиустары */
+  x: number;
+  y: number;
+  rx: number;
+  ry: number;
   notes: string;
   createdAt: string;
   updatedAt: string;
