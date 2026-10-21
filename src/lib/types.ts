@@ -283,4 +283,34 @@ export interface Lesson {
   updatedAt: string;
 }
 
+/** Оқушы сауалнамасы (атсыз). Әр сұрақ 1–5, 5 — ең жақсы. */
+export interface SurveyResponse {
+  id: string;
+  status: DataStatus;
+  roomId: string;
+  className: string;
+  /** YYYY-MM-DD */
+  date: string;
+  air: number;
+  energy: number;
+  head: number;
+  dry: number;
+  mood: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** Шаң тәжірибесі: ақ қағазға жиналған шаң бөлшектері, 1 см²-дегі орташа сан */
+export interface DustTest {
+  id: string;
+  status: DataStatus;
+  roomId: string;
+  startDate: string;
+  endDate: string;
+  count: number;
+  note: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export type MetricKey = "co2Ppm" | "temperatureC" | "humidityPct" | "pm25UgM3";

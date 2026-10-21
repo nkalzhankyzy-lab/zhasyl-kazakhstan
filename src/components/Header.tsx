@@ -1,6 +1,6 @@
 "use client";
 
-import { BookOpen, Bot, CloudOff, Database, FlaskConical, Library, LogIn, LogOut, Map as MapIcon, QrCode, School, Sprout, UserRound } from "lucide-react";
+import { BookOpen, Bot, CloudOff, Database, FlaskConical, Library, LogIn, LogOut, Map as MapIcon, MessageSquareHeart, QrCode, School, Sprout, UserRound } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -20,6 +20,7 @@ const NAV: { href: string; label: string; short?: string; icon: typeof MapIcon }
 
 const MENU = [
   { href: "/tekser", label: "Өз бөлмеңді тексер", icon: QrCode },
+  { href: "/saualnama", label: "Оқушы сауалнамасы", icon: MessageSquareHeart },
   { href: "/journal", label: "Зерттеу күнделігі", icon: BookOpen },
   { href: "/data", label: "Менің деректерім", icon: Database },
   { href: "/sources", label: "Дереккөздер", icon: Library },

@@ -7,12 +7,15 @@ import { useCollection, useHydrated } from "@/lib/storage/hooks";
 import { lessonHourKey, useOutdoor, WEATHER_PLACE, WEATHER_SOURCE } from "@/lib/weather";
 import { repositories } from "@/lib/storage/repositories";
 import { formatDate } from "@/lib/time";
-import type { Lesson, Room } from "@/lib/types";
+import type { DustTest, Lesson, Room, SurveyResponse } from "@/lib/types";
 import { AskAi } from "../ai/AskAi";
 import { roomsContext, plantCount, plantsPer10m2 } from "../garden/roomMath";
 import { useEditGuard, useSaveFeedback } from "../Providers";
 import { Dialog } from "../ui/Dialog";
+import { surveyContext, surveyStats } from "../survey/surveyMath";
+import { DustSection } from "./DustSection";
 import { LessonForm } from "./LessonForm";
+import { SurveySection } from "./SurveySection";
 import { CO2_SOURCE_LABEL, greenScore, lessonCo2, lessonsContext, VENT_LABEL, type Score } from "./lessonMath";
 
 const fmt = (n: number, d = 1) => n.toLocaleString("ru-RU", { maximumFractionDigits: d });
@@ -183,7 +186,7 @@ function LessonRow({ lesson, room, rooms }: { lesson: Lesson; room?: Room; rooms
 }
 
 /** Гүлді және гүлсіз кабинеттерді салыстыру (зерттеудің негізгі сұрағы) */
-function PlantCompare({ rooms, lessons }: { rooms: Room[]; lessons: Lesson[] }) {
+function PlantCompare({ rooms, lessons, survey, dust }: { rooms: Room[]; lessons: Lesson[]; survey: SurveyResponse[]; dust: DustTest[] }) {
   const bare = rooms.filter((r) => plantCount(r) === 0);
   const green = rooms.filter((r) => plantCount(r) > 0);
   // Әділ салыстыру: мүмкін болса, гүлсіз кабинетпен бір жаққа қараған гүлді кабинеттерді аламыз
@@ -205,16 +208,35 @@ function PlantCompare({ rooms, lessons }: { rooms: Room[]; lessons: Lesson[] }) 
       rhRise: avg(ls.map((l) => (l.rhEnd !== null && l.rhStart !== null ? l.rhEnd - l.rhStart : null))),
       tEnd: avg(ls.map((l) => l.tEnd)),
       co2: avg(ls.map((l) => lessonCo2(l, g.rooms.find((r) => r.id === l.roomId))?.value)),
+      survey: surveyStats(survey.filter((x) => g.rooms.some((r) => r.id === x.roomId))).total,
+      surveyN: survey.filter((x) => g.rooms.some((r) => r.id === x.roomId)).length,
+      dust: avg(dust.filter((x) => g.rooms.some((r) => r.id === x.roomId)).map((x) => x.count)),
     };
   });
   const [a, b] = groups;
   if (!a.n || !b.n) return null;
-  const rows: { label: string; k: "rhEnd" | "rhRise" | "tEnd" | "co2"; unit: string; d: number }[] = [
+  const rows: { label: string; k: "rhEnd" | "rhRise" | "tEnd" | "co2" | "survey" | "dust"; unit: string; d: number }[] = [
     { label: "Сабақ соңындағы ылғалдылық", k: "rhEnd", unit: "%", d: 0 },
     { label: "Сабақ бойы ылғалдылықтың өсуі", k: "rhRise", unit: " п.", d: 1 },
     { label: "Сабақ соңындағы температура", k: "tEnd", unit: " °C", d: 1 },
     { label: "CO₂ сабақ соңында (баға)", k: "co2", unit: " ppm", d: 0 },
+    { label: `Оқушылар бағасы, сауалнама (${a.surveyN} / ${b.surveyN} жауап)`, k: "survey", unit: " / 5", d: 2 },
+    { label: "Шаң, бөлшек / см² (апта)", k: "dust", unit: "", d: 1 },
   ];
+  // Деректен автоматты қорытынды: тек байқалған айырманы айтады
+  const concl: string[] = [];
+  const dRh = a.rhEnd !== null && b.rhEnd !== null ? a.rhEnd - b.rhEnd : null;
+  if (dRh !== null) concl.push(Math.abs(dRh) >= 2 ? `Ылғалдылық гүлді кабинетте ${fmt(Math.abs(dRh), 0)} пунктке ${dRh > 0 ? "жоғары" : "төмен"}.` : "Ылғалдылықта айтарлықтай айырма жоқ.");
+  const dCo2 = a.co2 !== null && b.co2 !== null ? a.co2 - b.co2 : null;
+  if (dCo2 !== null) concl.push(Math.abs(dCo2) < 150 ? "CO₂ шамамен бірдей: оны гүл емес, оқушы саны мен желдету анықтайды." : `CO₂ ${dCo2 > 0 ? "гүлді" : "гүлсіз"} кабинетте ${fmt(Math.abs(dCo2), 0)} ppm-ге жоғары; бұған желдету мен оқушы саны әсер етуі мүмкін.`);
+  if (a.survey !== null && b.survey !== null && a.surveyN >= 5 && b.surveyN >= 5) {
+    const d = a.survey - b.survey;
+    concl.push(Math.abs(d) >= 0.3 ? `Оқушылар ${d > 0 ? "гүлді" : "гүлсіз"} кабинетті ${fmt(Math.abs(d), 1)} баллға жоғары бағалады.` : "Оқушылардың бағасында айтарлықтай айырма жоқ.");
+  } else concl.push("Сауалнама нәтижесі әлі жеткіліксіз (әр кабинетке кемінде 5 жауап керек).");
+  if (a.dust !== null && b.dust !== null && b.dust > 0) {
+    const pct = ((b.dust - a.dust) / b.dust) * 100;
+    concl.push(Math.abs(pct) >= 10 ? `Гүлді кабинетте шаң ${fmt(Math.abs(pct), 0)}%-ға ${pct > 0 ? "аз" : "көп"} жиналды.` : "Шаң мөлшері шамамен бірдей.");
+  }
   const show = (v: number | null, d: number) => (v === null ? "—" : fmt(v, d));
   return (
     <div className="card min-w-0 p-4">
@@ -261,6 +283,10 @@ function PlantCompare({ rooms, lessons }: { rooms: Room[]; lessons: Lesson[] }) 
         </table>
       </div>
       <p className="mt-2 text-xs text-muted">
+        <span className="mb-1 block rounded-xl bg-mint px-3 py-2 text-sm text-forest">
+          <b>Деректер не көрсетеді: </b>
+          {concl.join(" ")}
+        </span>
         Ескерту: айырма гүлдің әсерін ғана емес, кабинет көлемін, оқушы санын, терезе бағытын және желдетуді де көрсетеді. Сенімді қорытынды үшін бірдей жағдайдағы (бір қабат, бір жаққа қараған) кабинеттерді ұзақ уақыт салыстыру керек. Гүл CO₂-ні айтарлықтай азайтпайды (Cummings & Waring, 2019), сондықтан негізгі айырма ылғалдылықта байқалуы мүмкін.
       </p>
     </div>
@@ -278,6 +304,10 @@ export function EcoPassport() {
   const baseLessons = useMemo(() => allLessons.filter((l) => l.status === "user").sort((a, b) => `${a.date}${a.time}`.localeCompare(`${b.date}${b.time}`)), [allLessons]);
   // Сыртқы ауа райы енгізілмеген сабақтарға Open-Meteo-дан сол сағаттың дерегін қосамыз
   const outdoor = useOutdoor(baseLessons.filter((l) => l.tOut == null).map((l) => l.date));
+  const allSurvey = useCollection(repositories.survey);
+  const allDust = useCollection(repositories.dust);
+  const survey = useMemo(() => allSurvey.filter((x) => x.status === "user").sort((a, b) => a.createdAt.localeCompare(b.createdAt)), [allSurvey]);
+  const dust = useMemo(() => allDust.filter((x) => x.status === "user").sort((a, b) => a.startDate.localeCompare(b.startDate)), [allDust]);
   const lessons = useMemo(
     () =>
       baseLessons.map((l) => {
@@ -319,7 +349,7 @@ export function EcoPassport() {
             ))}
           </ol>
 
-          <PlantCompare rooms={rooms} lessons={lessons} />
+          <PlantCompare rooms={rooms} lessons={lessons} survey={survey} dust={dust} />
 
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <div className="card min-w-0 p-4">
@@ -367,10 +397,13 @@ export function EcoPassport() {
               <AskAi
                 label="ЖИ: қорытынды мен ұсыныс"
                 question="Экопаспорт деректеріне қарап: 1) қай кабинет үздік және неге; 2) әр кабинетке 1–2 нақты ұсыныс (гүл қосу/ауыстыру, желдету уақыты); 3) гүл тығыздығы мен ылғалдылық арасында байланыс байқала ма — абай болып, іріктеменің аздығын ескер. Қысқа жаз."
-                context={`${lessonsContext(rooms, lessons)}\n\n${roomsContext(rooms, false)}`}
+                context={`${lessonsContext(rooms, lessons)}\n\n${surveyContext(rooms, survey)}\n\n${dust.length ? "ШАҢ ТӘЖІРИБЕСІ (бөлшек/см², апта): " + dust.map((d) => `${rooms.find((r) => r.id === d.roomId)?.name ?? d.roomId}: ${d.count}`).join("; ") : ""}\n\n${roomsContext(rooms, false)}`}
               />
             </div>
           </div>
+
+          <SurveySection rooms={rooms} responses={survey} />
+          <DustSection rooms={rooms} tests={dust} />
 
           <div className="flex flex-col gap-3">
             <div className="flex flex-wrap items-end justify-between gap-2">
