@@ -188,7 +188,14 @@ export function RegionPanel({ region, tab, onTab, highlightSampleId }: Props) {
           (full && region.soil ? (
             <>
               <SoilGallery types={region.soil.types} />
-              {region.soil.regionId === "KZ-43" ? <KyzylordaSoils compact /> : <SoilCutaway />}
+              {region.soil.regionId === "KZ-43" ? (
+                <>
+                  <SoilCutaway saline />
+                  <KyzylordaSoils compact />
+                </>
+              ) : (
+                <SoilCutaway />
+              )}
               <SoilIndicators samples={samples} />
               {studyButton}
               <section>
