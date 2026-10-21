@@ -6,20 +6,22 @@ import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from "
 import { MAIN_CLASSROOM, MAIN_SCHOOL } from "@/data/schools";
 import { useClassroomReadings } from "../sensors/useClassroomReadings";
 import { useDataMode } from "../Providers";
-import { Badge } from "../ui/Badge";
 import { readingsContext } from "./readingsContext";
 import { yardContext } from "../garden/yardMath";
 import { useCollection } from "@/lib/storage/hooks";
 import { repositories } from "@/lib/storage/repositories";
 import { roomsContext } from "../garden/roomMath";
+import { useSchoolResearch } from "../school/useSchoolResearch";
 
 type Msg = { role: "user" | "assistant"; content: string };
 
 const SUGGESTIONS = [
-  "Кабинеттегі CO₂ графигін түсіндіріп берші",
-  "Тақыр топырақ қалай пайда болады?",
+  "Гүлді және гүлсіз кабинеттің деректерін салыстыр: не байқалады?",
+  "Қай кабинеттің ауасын қалай жақсартуға болады?",
+  "Оқушылар сауалнамасы мен шаң тәжірибесі не көрсетеді?",
+  "Зерттеудің әлсіз жері қандай, тағы не өлшеу керек?",
   "Сынып бөлмесіне қандай гүл өсіруге болады?",
-  "Ауа сапасы туралы зерттеу сұрағын құруға көмектес",
+  "Тақыр топырақ қалай пайда болады?",
 ];
 
 /** **қалың** және жол басындағы «- » тізімін ғана көрсететін қарапайым пішімдеу */
@@ -58,10 +60,18 @@ export function AiAssistant() {
 
   const userRooms = useCollection(repositories.rooms);
   const yard = useCollection(repositories.yard);
+  const research = useSchoolResearch();
   const context = useMemo(() => {
     const rooms = userRooms.filter((r) => r.status === "user");
-    return `${roomsContext(rooms, false)}\n\n${yardContext(yard.filter((i) => i.status === "user"))}\n\n${readingsContext(readings, `${MAIN_SCHOOL.shortName}, ${MAIN_CLASSROOM.name}`, mode === "demo")}`;
-  }, [readings, mode, userRooms, yard]);
+    return [research.context, roomsContext(rooms, false), yardContext(yard.filter((i) => i.status === "user")), readingsContext(readings, `${MAIN_SCHOOL.shortName}, ${MAIN_CLASSROOM.name}`, mode === "demo")].filter(Boolean).join("\n\n");
+  }, [readings, mode, userRooms, yard, research.context]);
+  const seen = [
+    `${research.rooms.length} кабинет`,
+    `${research.lessons.length} сабақ өлшемі`,
+    `${research.survey.length} сауалнама жауабы`,
+    `${research.dust.length + research.lab.length} зертхана нәтижесі`,
+    `${readings.length} датчик көрсеткіші`,
+  ].filter((x) => !x.startsWith("0 "));
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
@@ -115,6 +125,18 @@ export function AiAssistant() {
         <div className="flex-1 space-y-4 overflow-y-auto p-4 sm:p-6" aria-live="polite">
           {messages.length === 0 && (
             <div className="flex flex-col gap-3">
+              {useData && seen.length > 0 && (
+                <div className="rounded-2xl bg-sand-2/50 px-4 py-3 text-sm">
+                  <p className="font-semibold text-bark">ЖИ көретін деректер ({MAIN_SCHOOL.shortName}):</p>
+                  <ul className="mt-1.5 flex flex-wrap gap-1.5">
+                    {seen.map((x) => (
+                      <li key={x} className="rounded-full bg-white px-2.5 py-0.5 text-ink/80 ring-1 ring-line">
+                        {x}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
               <p className="flex items-center gap-2 font-semibold text-forest">
                 <Sparkles size={18} aria-hidden /> Мысалы, былай сұраңыз:
               </p>
@@ -190,8 +212,7 @@ export function AiAssistant() {
           <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-sm text-muted">
             <label className="flex items-center gap-2">
               <input type="checkbox" checked={useData} onChange={(e) => setUseData(e.target.checked)} className="h-4 w-4 accent-[var(--color-forest)]" />
-              Кабинеттер мен өлшемдерді ЖИ-ге көрсету
-              <Badge tone={mode === "demo" ? "demo" : "user"}>{mode === "demo" ? "демо дерек" : "нақты дерек"}</Badge>
+              Мектеп зерттеуінің деректерін ЖИ-ге көрсету
             </label>
             {messages.length > 0 && (
               <button type="button" onClick={() => { setMessages([]); setError(null); }} className="flex items-center gap-1.5 rounded-lg px-2 py-1 hover:bg-mint">
