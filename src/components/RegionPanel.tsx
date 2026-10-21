@@ -11,6 +11,7 @@ import { formatNumber } from "@/lib/metrics";
 import { formatDate } from "@/lib/time";
 import type { InfoSection, Region, SoilSample } from "@/lib/types";
 import { PlantCatalog } from "./PlantCatalog";
+import { KyzylordaSoils } from "./soil/KyzylordaSoils";
 import { SoilCutaway } from "./soil/SoilCutaway";
 import { SoilGallery } from "./soil/SoilGallery";
 import { SoilSampleForm } from "./soil/SoilSampleForm";
@@ -187,7 +188,7 @@ export function RegionPanel({ region, tab, onTab, highlightSampleId }: Props) {
           (full && region.soil ? (
             <>
               <SoilGallery types={region.soil.types} />
-              <SoilCutaway />
+              {region.soil.regionId === "KZ-43" ? <KyzylordaSoils compact /> : <SoilCutaway />}
               <SoilIndicators samples={samples} />
               {studyButton}
               <section>
