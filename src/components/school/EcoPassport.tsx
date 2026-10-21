@@ -8,6 +8,7 @@ import { lessonHourKey, useOutdoor, WEATHER_PLACE, WEATHER_SOURCE } from "@/lib/
 import { repositories } from "@/lib/storage/repositories";
 import { formatDate } from "@/lib/time";
 import type { DustTest, Lesson, Room, SurveyResponse } from "@/lib/types";
+import { labContext, transpirationSummary } from "../lab/labMath";
 import { AskAi } from "../ai/AskAi";
 import { roomsContext, plantCount, plantsPer10m2 } from "../garden/roomMath";
 import { useEditGuard, useSaveFeedback } from "../Providers";
@@ -16,7 +17,7 @@ import { surveyContext, surveyStats } from "../survey/surveyMath";
 import { DustSection } from "./DustSection";
 import { LessonForm } from "./LessonForm";
 import { SurveySection } from "./SurveySection";
-import { CO2_SOURCE_LABEL, greenScore, lessonCo2, lessonsContext, VENT_LABEL, type Score } from "./lessonMath";
+import { CO2_SOURCE_LABEL, greenScore, lessonCo2, lessonsContext, VENT_LABEL, type Co2Opts, type Score } from "./lessonMath";
 
 const fmt = (n: number, d = 1) => n.toLocaleString("ru-RU", { maximumFractionDigits: d });
 const nv = (v: number | null) => (v === null ? "—" : fmt(v));
@@ -94,12 +95,12 @@ function ScoreCard({ room, score, place }: { room: Room; score: Score; place: nu
   );
 }
 
-function LessonRow({ lesson, room, rooms }: { lesson: Lesson; room?: Room; rooms: Room[] }) {
+function LessonRow({ lesson, room, rooms, opts }: { lesson: Lesson; room?: Room; rooms: Room[]; opts: Co2Opts }) {
   const guard = useEditGuard();
   const feedback = useSaveFeedback();
   const [edit, setEdit] = useState(false);
   const [confirm, setConfirm] = useState(false);
-  const c = lessonCo2(lesson, room);
+  const c = lessonCo2(lesson, room, opts);
   return (
     <tr className="border-b border-line align-top last:border-0">
       <td className="whitespace-nowrap px-3 py-2">
@@ -186,7 +187,7 @@ function LessonRow({ lesson, room, rooms }: { lesson: Lesson; room?: Room; rooms
 }
 
 /** Гүлді және гүлсіз кабинеттерді салыстыру (зерттеудің негізгі сұрағы) */
-function PlantCompare({ rooms, lessons, survey, dust }: { rooms: Room[]; lessons: Lesson[]; survey: SurveyResponse[]; dust: DustTest[] }) {
+function PlantCompare({ rooms, lessons, survey, dust, opts }: { rooms: Room[]; lessons: Lesson[]; survey: SurveyResponse[]; dust: DustTest[]; opts: Co2Opts }) {
   const bare = rooms.filter((r) => plantCount(r) === 0);
   const green = rooms.filter((r) => plantCount(r) > 0);
   // Әділ салыстыру: мүмкін болса, гүлсіз кабинетпен бір жаққа қараған гүлді кабинеттерді аламыз
@@ -207,7 +208,7 @@ function PlantCompare({ rooms, lessons, survey, dust }: { rooms: Room[]; lessons
       rhEnd: avg(ls.map((l) => l.rhEnd)),
       rhRise: avg(ls.map((l) => (l.rhEnd !== null && l.rhStart !== null ? l.rhEnd - l.rhStart : null))),
       tEnd: avg(ls.map((l) => l.tEnd)),
-      co2: avg(ls.map((l) => lessonCo2(l, g.rooms.find((r) => r.id === l.roomId))?.value)),
+      co2: avg(ls.map((l) => lessonCo2(l, g.rooms.find((r) => r.id === l.roomId), opts)?.value)),
       survey: surveyStats(survey.filter((x) => g.rooms.some((r) => r.id === x.roomId))).total,
       surveyN: survey.filter((x) => g.rooms.some((r) => r.id === x.roomId)).length,
       dust: avg(dust.filter((x) => g.rooms.some((r) => r.id === x.roomId)).map((x) => x.count)),
@@ -306,6 +307,8 @@ export function EcoPassport() {
   const outdoor = useOutdoor(baseLessons.filter((l) => l.tOut == null).map((l) => l.date));
   const allSurvey = useCollection(repositories.survey);
   const allDust = useCollection(repositories.dust);
+  const allLab = useCollection(repositories.lab);
+  const labResults = useMemo(() => allLab.filter((x) => x.status === "user"), [allLab]);
   const survey = useMemo(() => allSurvey.filter((x) => x.status === "user").sort((a, b) => a.createdAt.localeCompare(b.createdAt)), [allSurvey]);
   const dust = useMemo(() => allDust.filter((x) => x.status === "user").sort((a, b) => a.startDate.localeCompare(b.startDate)), [allDust]);
   const lessons = useMemo(
@@ -317,7 +320,10 @@ export function EcoPassport() {
       }),
     [baseLessons, outdoor],
   );
-  const ranked = useMemo(() => rooms.map((r) => ({ room: r, score: greenScore(r, lessons) })).sort((a, b) => b.score.total - a.score.total), [rooms, lessons]);
+  // Зертханада өлшенген гүлдің су буландыруы CO₂ формуласына қосылады
+  const plantGph = useMemo(() => transpirationSummary(labResults, rooms).perPotGph, [labResults, rooms]);
+  const co2Opts = useMemo<Co2Opts>(() => ({ plantGph }), [plantGph]);
+  const ranked = useMemo(() => rooms.map((r) => ({ room: r, score: greenScore(r, lessons, co2Opts) })).sort((a, b) => b.score.total - a.score.total), [rooms, lessons, co2Opts]);
   const shown = (filter === "all" ? lessons : lessons.filter((l) => l.roomId === filter)).slice().reverse();
   const scatter = ranked.filter((x) => x.score.avgRh !== null).map((x) => ({ x: Math.round(plantsPer10m2(x.room) * 10) / 10, y: x.score.avgRh, name: x.room.name.replace(/ кабинеті.*$/, "") }));
 
@@ -349,7 +355,7 @@ export function EcoPassport() {
             ))}
           </ol>
 
-          <PlantCompare rooms={rooms} lessons={lessons} survey={survey} dust={dust} />
+          <PlantCompare rooms={rooms} lessons={lessons} survey={survey} dust={dust} opts={co2Opts} />
 
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <div className="card min-w-0 p-4">
@@ -397,7 +403,7 @@ export function EcoPassport() {
               <AskAi
                 label="ЖИ: қорытынды мен ұсыныс"
                 question="Экопаспорт деректеріне қарап: 1) қай кабинет үздік және неге; 2) әр кабинетке 1–2 нақты ұсыныс (гүл қосу/ауыстыру, желдету уақыты); 3) гүл тығыздығы мен ылғалдылық арасында байланыс байқала ма — абай болып, іріктеменің аздығын ескер. Қысқа жаз."
-                context={`${lessonsContext(rooms, lessons)}\n\n${surveyContext(rooms, survey)}\n\n${dust.length ? "ШАҢ ТӘЖІРИБЕСІ (бөлшек/см², апта): " + dust.map((d) => `${rooms.find((r) => r.id === d.roomId)?.name ?? d.roomId}: ${d.count}`).join("; ") : ""}\n\n${roomsContext(rooms, false)}`}
+                context={`${lessonsContext(rooms, lessons, co2Opts)}\n\n${labContext(labResults, rooms)}\n\n${surveyContext(rooms, survey)}\n\n${dust.length ? "ШАҢ ТӘЖІРИБЕСІ (бөлшек/см², апта): " + dust.map((d) => `${rooms.find((r) => r.id === d.roomId)?.name ?? d.roomId}: ${d.count}`).join("; ") : ""}\n\n${roomsContext(rooms, false)}`}
               />
             </div>
           </div>
@@ -440,7 +446,7 @@ export function EcoPassport() {
                   </thead>
                   <tbody>
                     {shown.map((l) => (
-                      <LessonRow key={l.id} lesson={l} room={rooms.find((r) => r.id === l.roomId)} rooms={rooms} />
+                      <LessonRow key={l.id} lesson={l} room={rooms.find((r) => r.id === l.roomId)} rooms={rooms} opts={co2Opts} />
                     ))}
                   </tbody>
                 </table>

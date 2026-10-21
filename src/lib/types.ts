@@ -313,4 +313,31 @@ export interface DustTest {
   updatedAt: string;
 }
 
+export type LabKind = "co2" | "transpiration" | "stomata";
+export type Co2Sample = "start" | "end" | "outdoor" | "breath";
+
+/** Зертханадағы кабинет тәжірибесінің бір нәтижесі */
+export interface LabResult {
+  id: string;
+  status: DataStatus;
+  kind: LabKind;
+  roomId: string | null;
+  date: string;
+  /** CO₂: ауа сынамасы және ерітінді түсі өзгергенге дейінгі шприц басу саны */
+  sample?: Co2Sample;
+  pushes?: number | null;
+  /** Гүл (буландыру, лептесік) */
+  plant?: string;
+  /** Буландыру: басындағы және соңындағы масса, г; уақыт, сағ */
+  m1?: number | null;
+  m2?: number | null;
+  hours?: number | null;
+  /** Лептесік: көру алаңындағы саны және үлкейту */
+  stomata?: number | null;
+  mag?: number | null;
+  note: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export type MetricKey = "co2Ppm" | "temperatureC" | "humidityPct" | "pm25UgM3";

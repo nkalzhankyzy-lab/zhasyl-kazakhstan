@@ -2,6 +2,7 @@ import { FlaskConical } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { LabGuides } from "@/components/lab/LabGuides";
+import { RoomExperiments } from "@/components/lab/RoomExperiments";
 import { SoilCompare } from "@/components/lab/SoilCompare";
 import { WorldResearch } from "@/components/lab/WorldResearch";
 import { PreviewPage } from "@/components/PreviewPage";
@@ -39,6 +40,7 @@ export default function LabPage() {
       </section>
       <LabGuides />
       <SoilCompare />
+      <RoomExperiments />
       <WorldResearch />
     </PreviewPage>
   );

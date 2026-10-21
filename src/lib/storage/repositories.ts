@@ -7,7 +7,7 @@
 
 import type { PostgrestError, SupabaseClient } from "@supabase/supabase-js";
 import { getSupabase, SUPABASE_ENABLED } from "../supabase/client";
-import type { DustTest, GardenPlant, SurveyResponse, Lesson, ResearchEntry, Room, YardItem, SensorReading, SoilSample } from "../types";
+import type { DustTest, GardenPlant, LabResult, SurveyResponse, Lesson, ResearchEntry, Room, YardItem, SensorReading, SoilSample } from "../types";
 import { localStore, STORAGE_PREFIX, type SaveResult } from "./kv";
 
 type Listener = () => void;
@@ -391,6 +391,7 @@ export const repositories = {
   lessons: collection<Lesson>("lessons", { table: "zk_lessons", orderBy: "created_at" }),
   survey: collection<SurveyResponse>("survey", { table: "zk_survey", orderBy: "created_at" }),
   dust: collection<DustTest>("dust", { table: "zk_dust", orderBy: "created_at" }),
+  lab: collection<LabResult>("lab-results", { table: "zk_lab_results", orderBy: "created_at" }),
   classroomPhoto(classroomId: string) {
     let r = photoRepos.get(classroomId);
     if (!r) {
@@ -436,13 +437,14 @@ export async function exportAllUserData() {
     lessons: repositories.lessons.list(),
     survey: repositories.survey.list(),
     dust: repositories.dust.list(),
+    labResults: repositories.lab.list(),
     classroomPhotos: await allPhotos(),
   };
 }
 
 /** Барлық пайдаланушы дерегін өшіру (растаудан кейін ғана шақырылады). */
 export async function deleteAllUserData(): Promise<SaveResult> {
-  const repos = [repositories.soilSamples, repositories.readings, repositories.journal, repositories.garden, repositories.rooms, repositories.yard, repositories.lessons, repositories.survey, repositories.dust] as unknown as CollectionRepository<{ id: string }>[];
+  const repos = [repositories.soilSamples, repositories.readings, repositories.journal, repositories.garden, repositories.rooms, repositories.yard, repositories.lessons, repositories.survey, repositories.dust, repositories.lab] as unknown as CollectionRepository<{ id: string }>[];
   for (const repo of repos) {
     const res = await repo.replaceAll([]);
     if (!res.ok) return res;

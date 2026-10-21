@@ -27,9 +27,10 @@ export const CO2_SOURCE_LABEL: Record<Co2Source, string> = {
  *   W(t) = Wс + (W₀ − Wс)·e^(−λt),  Wс = Wсырт + S/(λV),  S = N·40 г/сағ.
  * Сыртқы дерек жоқ болса — бұрынғы қарапайым үлес әдісі.
  */
-export function co2FromHumidity(p: { n: number; v: number; tHours: number; c0: number; w0: number; w1: number; wOut?: number | null }): { value: number; ach: number | null } | null {
+export function co2FromHumidity(p: { n: number; v: number; tHours: number; c0: number; w0: number; w1: number; wOut?: number | null; extraWaterGH?: number }): { value: number; ach: number | null } | null {
   const added = (p.w1 - p.w0) * p.v;
-  const S = p.n * WATER_G_H;
+  // Су буының көзі: оқушылар + (өлшенген болса) гүлдердің буландыруы
+  const S = p.n * WATER_G_H + (p.extraWaterGH ?? 0);
   const sealed = co2At(p.tHours, { n: p.n, g: CO2_L_H, v: p.v, c0: 0, ach: 0 });
   if (p.wOut !== null && p.wOut !== undefined && p.wOut < p.w0) {
     const wAt = (lam: number) => {
@@ -52,11 +53,18 @@ export function co2FromHumidity(p: { n: number; v: number; tHours: number; c0: n
     return { value: co2At(p.tHours, { n: p.n, g: CO2_L_H, v: p.v, c0: p.c0, ach: lam }), ach: lam };
   }
   if (added <= 0) return null;
-  return { value: p.c0 + Math.min(added / (S * p.tHours), 1) * sealed, ach: null };
+  // Гүлдің суы оқушылардан болмағандықтан, үлесті тек оқушылардың суына шағамыз
+  const fromPeople = Math.max(0, added - (p.extraWaterGH ?? 0) * p.tHours);
+  return { value: p.c0 + Math.min(fromPeople / (p.n * WATER_G_H * p.tHours), 1) * sealed, ach: null };
 }
 
 /** Сабақ соңындағы CO₂: өлшенген → ылғалдылық арқылы → көлем мен желдету моделі */
-export function lessonCo2(l: Lesson, room: Room | undefined): { value: number; source: Co2Source; ach?: number | null } | null {
+/** Бір гүлдің буландыруы, г/сағ (зертханада өлшенсе). Берілмесе — ескерілмейді. */
+export interface Co2Opts {
+  plantGph?: number | null;
+}
+
+export function lessonCo2(l: Lesson, room: Room | undefined, opts: Co2Opts = {}): { value: number; source: Co2Source; ach?: number | null } | null {
   if (l.co2End !== null) return { value: l.co2End, source: "measured" };
   if (!room) return null;
   const v = roomVolume(room);
@@ -64,7 +72,8 @@ export function lessonCo2(l: Lesson, room: Room | undefined): { value: number; s
   const c0 = l.co2Start ?? (l.ventilation === "break" ? 420 : 550);
   if (l.tStart !== null && l.rhStart !== null && l.tEnd !== null && l.rhEnd !== null) {
     const wOut = l.tOut != null && l.rhOut != null ? absHumidity(l.tOut, l.rhOut) : null;
-    const h = co2FromHumidity({ n: l.pupils, v, tHours: t, c0, w0: absHumidity(l.tStart, l.rhStart), w1: absHumidity(l.tEnd, l.rhEnd), wOut });
+    const extraWaterGH = opts.plantGph ? opts.plantGph * plantCount(room) : 0;
+    const h = co2FromHumidity({ n: l.pupils, v, tHours: t, c0, w0: absHumidity(l.tStart, l.rhStart), w1: absHumidity(l.tEnd, l.rhEnd), wOut, extraWaterGH });
     if (h) return { value: Math.round(h.value), source: "humidity", ach: h.ach };
   }
   return { value: Math.round(co2At(t, { n: l.pupils, g: CO2_L_H, v, c0, ach: ACH[l.ventilation] })), source: "model" };
@@ -84,9 +93,9 @@ export interface Score {
 }
 
 /** Жасыл ұпай (100): ауа 40, ылғалдылық 20, гүлдер 25, күтім 15 */
-export function greenScore(room: Room, lessons: Lesson[]): Score {
+export function greenScore(room: Room, lessons: Lesson[], opts: Co2Opts = {}): Score {
   const ls = lessons.filter((l) => l.roomId === room.id);
-  const co2 = ls.map((l) => lessonCo2(l, room)?.value).filter((v): v is number => v !== undefined);
+  const co2 = ls.map((l) => lessonCo2(l, room, opts)?.value).filter((v): v is number => v !== undefined);
   const rh = ls.map((l) => l.rhEnd).filter((v): v is number => v !== null);
   const okAirShare = co2.length ? co2.filter((v) => v <= 1000).length / co2.length : null;
   const rhPts = rh.map((v) => (v >= 40 && v <= 60 ? 1 : v >= 30 && v <= 70 ? 0.5 : 0));
@@ -115,16 +124,16 @@ export function greenScore(room: Room, lessons: Lesson[]): Score {
   };
 }
 
-export function lessonsContext(rooms: Room[], lessons: Lesson[]): string {
+export function lessonsContext(rooms: Room[], lessons: Lesson[], opts: Co2Opts = {}): string {
   if (!rooms.length) return "";
   const lines = ["ЭКОПАСПОРТ (мұғалім енгізген сабақ журналы; CO₂ көбіне ылғалдылық немесе көлем арқылы БАҒАЛАНҒАН, өлшенбеген):"];
   for (const r of rooms) {
-    const s = greenScore(r, lessons);
+    const s = greenScore(r, lessons, opts);
     lines.push(
       `- ${r.name}: жасыл ұпай ${s.total}/100 (ауа ${s.air}/40, ылғалдылық ${s.humidity}/20, гүлдер ${s.plants}/25, күтім ${s.care}/15); ${s.lessons} сабақ; орташа CO₂ сабақ соңында ${s.avgCo2 ?? "—"} ppm; орташа ылғалдылық ${s.avgRh ?? "—"}%; гүл ${plantCount(r)}.`,
     );
     for (const l of lessons.filter((x) => x.roomId === r.id).slice(-6)) {
-      const c = lessonCo2(l, r);
+      const c = lessonCo2(l, r, opts);
       lines.push(
         `  · ${l.date} ${l.time}, ${l.subject}, ${l.className}, ${l.pupils} оқушы, ${l.durationMin} мин, ${VENT_LABEL[l.ventilation]}; сыртта ${l.tOut != null ? `${Math.round(l.tOut)} °C, ${Math.round(l.rhOut ?? 0)}%` : "—"}; T ${l.tStart ?? "—"}→${l.tEnd ?? "—"} °C, RH ${l.rhStart ?? "—"}→${l.rhEnd ?? "—"}%; CO₂ ≈ ${c?.value ?? "—"} ppm (${c ? CO2_SOURCE_LABEL[c.source] : "—"})`,
       );
