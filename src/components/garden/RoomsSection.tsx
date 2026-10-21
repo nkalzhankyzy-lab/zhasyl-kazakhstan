@@ -27,7 +27,7 @@ import { AskAi } from "../ai/AskAi";
 import { useEditGuard, useSaveFeedback } from "../Providers";
 import { Dialog } from "../ui/Dialog";
 import { RoomForm as RoomFormLazy } from "./RoomForm";
-import {
+import { roomNo,
   CONDITION_LABEL,
   DEFAULT_PUPILS,
   lightFit,
@@ -110,14 +110,14 @@ function RoomCard({ room, n, all }: { room: Room; n: number; all: Room[] }) {
   return (
     <li
       id={`room-${room.id}`}
-      className="card flex scroll-mt-28 flex-col gap-3 p-4"
+      className="card flex min-w-0 scroll-mt-28 flex-col gap-3 p-4"
     >
       <div className="flex items-start gap-3">
         <DirCompass dir={room.windowDir} />
         <div className="min-w-0">
           <h3 className="flex items-center gap-2 text-lg font-semibold text-ink">
-            <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-forest text-xs font-bold text-white">
-              {n}
+            <span className="inline-flex h-6 min-w-6 shrink-0 items-center justify-center rounded-full bg-forest px-1.5 text-xs font-bold text-white">
+              {roomNo(room, n)}
             </span>
             {room.name}
           </h3>
@@ -299,7 +299,7 @@ function RoomCard({ room, n, all }: { room: Room; n: number; all: Room[] }) {
 function CompareTable({ rooms }: { rooms: Room[] }) {
   const sorted = [...rooms].sort((a, b) => plantsPer10m2(b) - plantsPer10m2(a));
   return (
-    <div className="card overflow-x-auto p-0">
+    <div className="card relative overflow-x-auto p-0">
       <table className="w-full min-w-[560px] text-sm">
         <caption className="px-4 pt-3 text-left font-semibold text-forest">
           Кабинеттерді салыстыру (гүл тығыздығы бойынша)
@@ -412,7 +412,7 @@ export function RoomsSection() {
         ) : (
           <>
             {rooms.length > 1 && <CompareTable rooms={rooms} />}
-            <ul className="grid gap-4 md:grid-cols-2">
+            <ul className="grid grid-cols-1 gap-4 md:grid-cols-2">
               {rooms.map((r, i) => (
                 <RoomCard key={r.id} room={r} n={i + 1} all={rooms} />
               ))}

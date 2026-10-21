@@ -16,6 +16,7 @@ import { useMemo, useRef, useState, type MouseEvent } from "react";
 import {
   ANNEXES,
   BUILDINGS,
+  CANTEEN,
   factFor,
   KIND_LABEL,
   MAP_H,
@@ -31,7 +32,7 @@ import type { Room, YardItem } from "@/lib/types";
 import { AskAi } from "../ai/AskAi";
 import { useEditGuard, useSaveFeedback } from "../Providers";
 import { Dialog } from "../ui/Dialog";
-import { roomsContext } from "./roomMath";
+import { roomNo, roomsContext } from "./roomMath";
 import {
   CONDITION_YARD,
   seeded,
@@ -283,27 +284,27 @@ export function SchoolMap({ rooms }: { rooms: Room[] }) {
               strokeWidth={2}
               strokeDasharray="6 4"
             />
-            {/* көше */}
-            <rect x={0} y={562} width={MAP_W} height={38} fill="#9aa0a6" />
+            {/* көше (солтүстікте, кіреберіс жақта) */}
+            <rect x={0} y={8} width={MAP_W} height={38} fill="#9aa0a6" />
             <path
-              d={`M0 581H${MAP_W}`}
+              d={`M0 27H${MAP_W}`}
               stroke="#f8fafc"
               strokeWidth={2}
               strokeDasharray="14 10"
             />
-            <text x={18} y={594} fontSize={11} fill="#f8fafc" fontWeight={600}>
+            <text x={18} y={40} fontSize={11} fill="#f8fafc" fontWeight={600}>
               Көше
             </text>
-            <rect x={286} y={548} width={36} height={14} fill="#f4ecd9" />
+            {/* ішкі аула (оңтүстікте) */}
             <text
               x={304}
-              y={545}
+              y={546}
               fontSize={10}
               textAnchor="middle"
               fill="#6b4b2f"
               fontWeight={600}
             >
-              Кіреберіс
+              Ішкі аула
             </text>
             {/* аймақтар */}
             {ZONES.map((z) => (
@@ -421,6 +422,16 @@ export function SchoolMap({ rooms }: { rooms: Room[] }) {
             >
               Мектеп-лицей №23
             </text>
+            <text
+              x={CANTEEN.x}
+              y={CANTEEN.y}
+              fontSize={11}
+              textAnchor="middle"
+              fill="#fdf2e9"
+              fontWeight={600}
+            >
+              {CANTEEN.label}
+            </text>
             {/* ашық орындар */}
             {OPEN_SPOTS.map((s) => (
               <g
@@ -472,6 +483,9 @@ export function SchoolMap({ rooms }: { rooms: Room[] }) {
                 />
               </g>
             ))}
+            {/* қақпа (ағаштардың үстінен салынады) мен кіреберіс жолы */}
+            <rect x={300} y={46} width={26} height={70} fill="url(#pave)" pointerEvents="none" />
+            <rect x={296} y={58} width={34} height={8} fill="#e6dccb" pointerEvents="none" />
             {/* кабинеттер */}
             {placedRooms.map(({ room, spot, n }) => (
               <g
@@ -483,10 +497,12 @@ export function SchoolMap({ rooms }: { rooms: Room[] }) {
                   setSel({ type: "room", id: room.id });
                 }}
               >
-                <circle
-                  cx={spot!.x}
-                  cy={spot!.y}
-                  r={11}
+                <rect
+                  x={spot!.x - (roomNo(room, n).length > 1 ? 18 : 11)}
+                  y={spot!.y - 11}
+                  width={roomNo(room, n).length > 1 ? 36 : 22}
+                  height={22}
+                  rx={11}
                   fill={
                     sel?.type === "room" && sel.id === room.id
                       ? "#c2410c"
@@ -503,12 +519,12 @@ export function SchoolMap({ rooms }: { rooms: Room[] }) {
                   fill="#fff"
                   fontWeight={700}
                 >
-                  {n}
+                  {roomNo(room, n)}
                 </text>
               </g>
             ))}
             {/* компас */}
-            <g transform="translate(446 32)">
+            <g transform="translate(446 574)">
               <circle r={22} fill="#fffbf2" stroke="#8b7a5c" />
               <path d="M0 -7 L4.5 5 L0 2 L-4.5 5 Z" fill="#c2410c" />
               <text
@@ -550,7 +566,7 @@ export function SchoolMap({ rooms }: { rooms: Room[] }) {
               </text>
             </g>
             {/* масштаб */}
-            <g transform="translate(14 44)">
+            <g transform="translate(14 578)">
               <path d="M0 0h40" stroke="#56634f" strokeWidth={2} />
               <path d="M0 -3v6M40 -3v6" stroke="#56634f" strokeWidth={2} />
               <text x={46} y={4} fontSize={9} fill="#56634f">
@@ -572,10 +588,10 @@ export function SchoolMap({ rooms }: { rooms: Room[] }) {
               гүлзар
             </li>
             <li className="flex items-center gap-1">
-              <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-forest text-[9px] font-bold text-white">
-                1
+              <span className="inline-flex h-4 items-center justify-center rounded-full bg-forest px-1 text-[9px] font-bold text-white">
+                212
               </span>{" "}
-              кабинет
+              кабинет (нөмірі)
             </li>
             <li className="flex items-center gap-1">
               <span className="inline-block h-3 w-3 rounded-full border border-dashed border-amber-600 bg-amber-50" />{" "}

@@ -182,6 +182,91 @@ function LessonRow({ lesson, room, rooms }: { lesson: Lesson; room?: Room; rooms
   );
 }
 
+/** Гүлді және гүлсіз кабинеттерді салыстыру (зерттеудің негізгі сұрағы) */
+function PlantCompare({ rooms, lessons }: { rooms: Room[]; lessons: Lesson[] }) {
+  const bare = rooms.filter((r) => plantCount(r) === 0);
+  const green = rooms.filter((r) => plantCount(r) > 0);
+  // Әділ салыстыру: мүмкін болса, гүлсіз кабинетпен бір жаққа қараған гүлді кабинеттерді аламыз
+  const sameSide = green.filter((r) => bare.some((x) => x.windowDir === r.windowDir));
+  const pair = sameSide.length > 0;
+  const groups = [
+    { key: "with", label: pair && sameSide.length === 1 ? sameSide[0].name : "Гүлді кабинеттер", rooms: pair ? sameSide : green },
+    { key: "without", label: bare.length === 1 ? bare[0].name : "Гүлсіз кабинеттер", rooms: bare },
+  ].map((g) => {
+    const ls = lessons.filter((l) => g.rooms.some((r) => r.id === l.roomId));
+    const avg = (xs: (number | null | undefined)[]) => {
+      const v = xs.filter((x): x is number => typeof x === "number");
+      return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null;
+    };
+    return {
+      ...g,
+      n: ls.length,
+      rhEnd: avg(ls.map((l) => l.rhEnd)),
+      rhRise: avg(ls.map((l) => (l.rhEnd !== null && l.rhStart !== null ? l.rhEnd - l.rhStart : null))),
+      tEnd: avg(ls.map((l) => l.tEnd)),
+      co2: avg(ls.map((l) => lessonCo2(l, g.rooms.find((r) => r.id === l.roomId))?.value)),
+    };
+  });
+  const [a, b] = groups;
+  if (!a.n || !b.n) return null;
+  const rows: { label: string; k: "rhEnd" | "rhRise" | "tEnd" | "co2"; unit: string; d: number }[] = [
+    { label: "Сабақ соңындағы ылғалдылық", k: "rhEnd", unit: "%", d: 0 },
+    { label: "Сабақ бойы ылғалдылықтың өсуі", k: "rhRise", unit: " п.", d: 1 },
+    { label: "Сабақ соңындағы температура", k: "tEnd", unit: " °C", d: 1 },
+    { label: "CO₂ сабақ соңында (баға)", k: "co2", unit: " ppm", d: 0 },
+  ];
+  const show = (v: number | null, d: number) => (v === null ? "—" : fmt(v, d));
+  return (
+    <div className="card min-w-0 p-4">
+      <h3 className="font-semibold text-forest">Гүлді және гүлсіз кабинет: айырмашылық бар ма?</h3>
+      <p className="text-sm text-muted">
+        Гүлсіз кабинет — салыстыруға арналған бақылау кабинеті.{" "}
+        {pair ? "Әділ болу үшін терезесі бір жаққа қараған кабинеттер салыстырылды." : "Барлық гүлді кабинеттер бірге алынды."} Әр мән — сабақтардың орташасы.
+      </p>
+      <div className="relative mt-2 overflow-x-auto">
+        <table className="w-full min-w-[480px] text-sm">
+          <thead>
+            <tr className="border-b border-line text-left text-xs text-muted">
+              <th className="py-2 pr-2 font-medium">Көрсеткіш</th>
+              <th className="px-2 py-2 font-medium">
+                {a.label} ({a.n} сабақ)
+              </th>
+              <th className="px-2 py-2 font-medium">
+                {b.label} ({b.n} сабақ)
+              </th>
+              <th className="px-2 py-2 font-medium">Айырма</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row) => {
+              const va = a[row.k];
+              const vb = b[row.k];
+              const diff = va !== null && vb !== null ? va - vb : null;
+              return (
+                <tr key={row.k} className="border-b border-line last:border-0">
+                  <td className="py-2 pr-2">{row.label}</td>
+                  <td className="px-2 py-2 font-semibold">
+                    {show(va, row.d)}
+                    {row.unit}
+                  </td>
+                  <td className="px-2 py-2 font-semibold">
+                    {show(vb, row.d)}
+                    {row.unit}
+                  </td>
+                  <td className="px-2 py-2">{diff === null ? "—" : `${diff > 0 ? "+" : ""}${fmt(diff, row.d)}${row.unit}`}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+      <p className="mt-2 text-xs text-muted">
+        Ескерту: айырма гүлдің әсерін ғана емес, кабинет көлемін, оқушы санын, терезе бағытын және желдетуді де көрсетеді. Сенімді қорытынды үшін бірдей жағдайдағы (бір қабат, бір жаққа қараған) кабинеттерді ұзақ уақыт салыстыру керек. Гүл CO₂-ні айтарлықтай азайтпайды (Cummings & Waring, 2019), сондықтан негізгі айырма ылғалдылықта байқалуы мүмкін.
+      </p>
+    </div>
+  );
+}
+
 export function EcoPassport() {
   const allRooms = useCollection(repositories.rooms);
   const allLessons = useCollection(repositories.lessons);
@@ -228,11 +313,13 @@ export function EcoPassport() {
         <p className="card p-5 text-muted">Алдымен «Менің жасыл бағым» бөлімінде кабинеттерді енгізіңіз.</p>
       ) : (
         <>
-          <ol className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          <ol className="grid gap-4 md:grid-cols-2">
             {ranked.map((x, i) => (
               <ScoreCard key={x.room.id} room={x.room} score={x.score} place={i} />
             ))}
           </ol>
+
+          <PlantCompare rooms={rooms} lessons={lessons} />
 
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <div className="card min-w-0 p-4">
@@ -256,7 +343,7 @@ export function EcoPassport() {
               ) : (
                 <p className="mt-2 text-sm text-muted">Салыстыру үшін кемінде екі кабинетте сабақ жазбасы керек.</p>
               )}
-              <p className="mt-1 text-xs text-muted">Ескерту: үш кабинет — шағын іріктеме. Айырмашылыққа терезе бағыты, желдету, оқушы саны да әсер етеді.</p>
+              <p className="mt-1 text-xs text-muted">Ескерту: {rooms.length} кабинет — шағын іріктеме. Айырмашылыққа терезе бағыты, желдету, оқушы саны да әсер етеді.</p>
             </div>
             <div className="card flex min-w-0 flex-col gap-2 p-4">
               <h3 className="font-semibold text-forest">Жасыл ұпай қалай есептеледі?</h3>

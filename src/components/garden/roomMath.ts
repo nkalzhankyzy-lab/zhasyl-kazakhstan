@@ -38,6 +38,9 @@ export function roomsContext(rooms: Room[], demo: boolean): string {
 }
 
 export const DEFAULT_PUPILS = 25;
+
+/** Кабинет нөмірі атауынан («… (№212)»), болмаса реттік нөмір */
+export const roomNo = (r: Room, fallback: number) => r.name.match(/№\s*(\d+[а-яәөүұқғңһіА-Я]?)/)?.[1] ?? String(fallback);
 const CO2_PER_PUPIL_L_H = 18;
 
 /** Терезе жабық болғанда CO₂ 420-дан 1000 ppm-ге неше минутта жетеді (ауа алмаспайды деп) */

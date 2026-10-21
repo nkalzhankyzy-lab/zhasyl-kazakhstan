@@ -38,7 +38,7 @@ export const ZONES: MapZone[] = [
   { id: "football", x: 14, y: 312, w: 102, h: 226, label: "Футбол алаңы", kind: "field" },
   { id: "sport", x: 288, y: 268, w: 116, h: 76, label: "Спорт алаңы", kind: "sport" },
   { id: "plaza", x: 252, y: 446, w: 150, h: 34, label: "Салтанатты жиын алаңы", kind: "plaza" },
-  { id: "inner", x: 292, y: 116, w: 42, h: 94, label: "Ішкі аула", kind: "inner" },
+  { id: "inner", x: 292, y: 116, w: 42, h: 94, label: "Кіреберіс", kind: "inner" },
 ];
 
 /** Ағаш егуге болатын ашық орындар (ұсыныс) */
@@ -50,15 +50,17 @@ export const OPEN_SPOTS = [
 
 /** Кабинет орналасуы мүмкін орындар (терезе бағытымен) */
 export const ROOM_SPOTS: { id: string; label: string; x: number; y: number; dir: WindowDir }[] = [
-  { id: "s-front", label: "Оңтүстік корпус, көшеге қараған жақ", x: 330, y: 425, dir: "S" },
-  { id: "s-front-west", label: "Оңтүстік корпус, батыс бөлігі (көшеге қараған)", x: 190, y: 425, dir: "S" },
+  { id: "s-front", label: "Оңтүстік корпус, ішкі аулаға қараған жақ", x: 330, y: 425, dir: "S" },
+  { id: "s-front-west", label: "Оңтүстік корпус, батыс бөлігі (ішкі аулаға қараған)", x: 190, y: 425, dir: "S" },
   { id: "sw-west", label: "Оңтүстік корпус, батыс қанаты (футбол алаңына қараған)", x: 160, y: 315, dir: "W" },
-  { id: "s-inner", label: "Оңтүстік корпус, ішкі аулаға қараған жақ", x: 360, y: 362, dir: "N" },
+  { id: "s-inner", label: "Оңтүстік корпус, спорт алаңына қараған жақ", x: 360, y: 362, dir: "N" },
   { id: "bar-inner", label: "Ортаңғы корпус, спорт алаңына қараған жақ", x: 330, y: 248, dir: "S" },
-  { id: "nw-north", label: "Солтүстік корпус, солтүстік жақ", x: 215, y: 108, dir: "N" },
   { id: "nw-west", label: "Солтүстік корпус, батыс жақ", x: 162, y: 160, dir: "W" },
   { id: "ne-east", label: "Шығыс корпус, шығысқа қараған жақ", x: 428, y: 180, dir: "E" },
 ];
+
+/** Асхана орналасқан корпус (кабинет емес) */
+export const CANTEEN = { x: 218, y: 162, label: "Асхана" };
 
 export const spotById = (id: string | null | undefined) => ROOM_SPOTS.find((s) => s.id === id);
 
