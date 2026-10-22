@@ -5,9 +5,10 @@ import { useState } from "react";
 import { repositories } from "@/lib/storage/repositories";
 import { formatDate } from "@/lib/time";
 import type { Room, SurveyResponse } from "@/lib/types";
-import { plantCount } from "../garden/roomMath";
+import { AskAi } from "../ai/AskAi";
+import { plantCount, roomsContext } from "../garden/roomMath";
 import { useEditGuard, useSaveFeedback } from "../Providers";
-import { FACES, QUESTIONS, surveyStats, type SurveyKey } from "../survey/surveyMath";
+import { FACES, QUESTIONS, surveyContext, surveyStats, type SurveyKey } from "../survey/surveyMath";
 import { Dialog } from "../ui/Dialog";
 import { QrDialog } from "./QrDialog";
 
@@ -187,6 +188,13 @@ export function SurveySection({ rooms, responses }: { rooms: Room[]; responses: 
           );
         })}
       </ul>
+      {responses.length > 0 && (
+        <AskAi
+          label="ЖИ: сауалнаманы талда"
+          question="Оқушылар сауалнамасының нәтижесін талда. Гүлді және гүлсіз кабинеттерді салыстыр: қай көрсеткіште айырма бар (ауа, сергектік, бас ауруы, құрғақтық, көңіл-күй)? Жауап саны аз болса (кабинетке 5-тен кем), қорытынды жасауға ерте екенін айт. Әр кабинетке 1–2 нақты ұсыныс бер: гүл қосу, желдету, ылғалдылық. Әлемдік зерттеулерге (Автор, жыл) сілте. Қысқа жаз."
+          context={`${surveyContext(rooms, responses)}\n\n${roomsContext(rooms, false)}`}
+        />
+      )}
       {responses.length > 0 && (
         <details className="card p-0">
           <summary className="cursor-pointer px-4 py-3 font-semibold text-forest">Барлық жауаптар ({responses.length}) — өңдеу және өшіру</summary>
