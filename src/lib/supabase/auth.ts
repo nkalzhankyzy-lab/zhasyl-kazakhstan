@@ -102,6 +102,14 @@ export async function signUp(email: string, password: string): Promise<AuthResul
   return { ok: true, message: "Поштаңызға растау хаты жіберілді. Сілтемені ашқан соң осы жерден кіріңіз." };
 }
 
+export async function changePassword(password: string): Promise<AuthResult> {
+  const sb = getSupabase();
+  if (!sb) return { ok: false, message: "Дерекқор бапталмаған." };
+  const { error } = await sb.auth.updateUser({ password });
+  if (error) return { ok: false, message: authError(error.message) };
+  return { ok: true, message: "Құпиясөз өзгертілді. Келесі жолы жаңасымен кіресіз." };
+}
+
 export async function signOut() {
   const sb = getSupabase();
   if (!sb) return;

@@ -1,12 +1,13 @@
 "use client";
 
-import { BookOpen, Bot, CloudOff, Database, FlaskConical, Library, Layers, LogIn, LogOut, Map as MapIcon, MessageSquareHeart, QrCode, School, Sprout, UserRound } from "lucide-react";
+import { BookOpen, Bot, CloudOff, Database, FlaskConical, KeyRound, Library, Layers, LogIn, LogOut, Map as MapIcon, MessageSquareHeart, QrCode, School, Sprout, UserRound } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useAuth, useSyncStatus } from "@/lib/storage/hooks";
 import { signOut } from "@/lib/supabase/auth";
 import { SUPABASE_ENABLED } from "@/lib/supabase/client";
+import { ChangePassword } from "./ChangePassword";
 import { Logo } from "./Logo";
 import { useLogin } from "./Providers";
 
@@ -31,6 +32,7 @@ export function Header() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const [pwOpen, setPwOpen] = useState(false);
   const auth = useAuth();
   const sync = useSyncStatus();
   const login = useLogin();
@@ -113,6 +115,20 @@ export function Header() {
                   {label}
                 </Link>
               ))}
+              {SUPABASE_ENABLED && auth.userId && (
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setOpen(false);
+                    setPwOpen(true);
+                  }}
+                  className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-[15px] font-medium hover:bg-mint"
+                >
+                  <KeyRound size={18} className="text-forest" aria-hidden />
+                  Құпиясөзді өзгерту
+                </button>
+              )}
               {SUPABASE_ENABLED && (
                 <button
                   type="button"
@@ -132,6 +148,7 @@ export function Header() {
           )}
         </div>
       </div>
+      {pwOpen && <ChangePassword onClose={() => setPwOpen(false)} />}
       {/* Телефондағы мәзір */}
       <nav aria-label="Негізгі мәзір (телефон)" className="border-t border-line/60 lg:hidden">
         <ul className="grid grid-cols-5">
