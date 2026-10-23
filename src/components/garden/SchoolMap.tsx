@@ -589,7 +589,7 @@ export function SchoolMap({ rooms }: { rooms: Room[] }) {
             </li>
             <li className="flex items-center gap-1">
               <span className="inline-flex h-4 items-center justify-center rounded-full bg-forest px-1 text-[9px] font-bold text-white">
-                212
+                118
               </span>{" "}
               кабинет (нөмірі)
             </li>
