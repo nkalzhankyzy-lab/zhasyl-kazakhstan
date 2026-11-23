@@ -8,6 +8,20 @@ import { co2FromHumidity } from "../school/lessonMath";
 import { AskAi } from "../ai/AskAi";
 import { absHumidity, co2At } from "../school/Co2Estimator";
 import { Dialog } from "../ui/Dialog";
+import { INDOOR_PLANTS, WINDOW_DIRS, roomLight } from "@/data/indoor-plants";
+import type { WindowDir } from "@/lib/types";
+
+const LAT = 44.85; // Қызылорда
+const PLANTS_PER_10 = 3; // экопаспорттағы толық ұпай: 10 м²-ге 3 гүл
+const LIGHT_KK = { shade: "көлеңке (тікелей күн аз)", partial: "жартылай жарық (таңертең күн)", bright: "жарық, күн көп" } as const;
+
+/** Бүгінгі күннің тал түстегі биіктігі: h = 90° − φ + δ */
+function noonAltitude(d = new Date()) {
+  const start = Date.UTC(d.getUTCFullYear(), 0, 0);
+  const N = Math.floor((d.getTime() - start) / 86400000);
+  const delta = 23.44 * Math.sin(((2 * Math.PI) / 365) * (284 + N));
+  return { h: 90 - LAT + delta, delta };
+}
 
 const PLACES = ["Сынып", "Акт залы", "Үй бөлмесі", "Кеңсе"] as const;
 const WINDOWS = [
@@ -52,6 +66,7 @@ function Field({ id, label, value, onChange, hint, suffix }: { id: string; label
 export function RoomCheck({ qrSrc }: { qrSrc: string }) {
   const [place, setPlace] = useState<(typeof PLACES)[number]>("Сынып");
   const [win, setWin] = useState<WinId>("closed");
+  const [dir, setDir] = useState<WindowDir | null>(null);
   const [f, setF] = useState({ a: "8", b: "6", h: "3", n: "25", plants: "3", min: "45", t1: "", rh1: "", t2: "", rh2: "", co2: "" });
   const [qr, setQr] = useState(false);
   const outdoor = useCurrentOutdoor();
@@ -115,6 +130,23 @@ export function RoomCheck({ qrSrc }: { qrSrc: string }) {
     result = { area, v, perArea, perVol: v / n, co2End, to1000, humCo2, plantsPer10, rhNow, tips };
   }
 
+  // Гүл: қанша және қандай (аудан мен терезе бағыты бойынша)
+  let flora: null | { area: number; need: number; have: number; add: number; light: ReturnType<typeof roomLight>; list: typeof INDOOR_PLANTS; sun: null | { h: number; delta: number; H: number; d: number } } = null;
+  if (ok(a) && ok(b)) {
+    const area = a * b;
+    const need = Math.ceil((area / 10) * PLANTS_PER_10);
+    const have = ok(plants) ? plants : 0;
+    const light = roomLight(dir);
+    const list = light ? INDOOR_PLANTS.filter((p) => p.light.includes(light) && p.id !== "lalagul").slice(0, 8) : [];
+    let sun = null;
+    if (dir === "S" || dir === "SE" || dir === "SW") {
+      const { h: alt, delta } = noonAltitude();
+      const H = Math.min(2.5, ok(h) ? Math.max(1, h - 0.4) : 2.5);
+      if (alt > 0) sun = { h: alt, delta, H, d: H / Math.tan((alt * Math.PI) / 180) };
+    }
+    flora = { area, need, have, add: Math.max(0, need - have), light, list, sun };
+  }
+
   const context = result
     ? [
         `ТЕКСЕРІЛГЕН ОРЫН: ${place}. Өлшемі ${a}×${b}×${h} м (аудан ${fmt(result.area, 1)} м², көлем ${fmt(result.v)} м³). Адам саны ${n}, ұзақтығы ${min} мин, ${WINDOWS.find((w) => w.id === win)!.label}. Гүл саны ${plants ?? 0}.`,
@@ -124,6 +156,8 @@ export function RoomCheck({ qrSrc }: { qrSrc: string }) {
         co2m ? `CO₂ өлшегіш көрсеткіші: ${co2m} ppm.` : "",
         result.rhNow !== null ? `Қазіргі ылғалдылық ${result.rhNow}%.` : "",
         out ? `Сыртта қазір (${WEATHER_PLACE}): ${out.t} °C, ылғалдылық ${out.rh}%.` : "",
+        flora ? `Терезе бағыты: ${dir ? WINDOW_DIRS.find((d) => d.id === dir)!.label : "көрсетілмеген"}${flora.light ? ` (${LIGHT_KK[flora.light]})` : ""}. Ұсынылған гүл саны: 10 м²-ге ${PLANTS_PER_10} → ${flora.need} гүл, бар ${flora.have}, тағы ${flora.add}. Жарыққа сай гүлдер: ${flora.list.map((p) => p.name).join(", ") || "терезе бағыты белгісіз"}.` : "",
+        flora?.sun ? `Бүгін тал түсте күн биіктігі ≈ ${fmt(flora.sun.h)}°, күн сәулесі еденде терезеден ≈ ${fmt(flora.sun.d, 1)} м-ге жетеді.` : "",
       ]
         .filter(Boolean)
         .join("\n")
@@ -181,6 +215,23 @@ export function RoomCheck({ qrSrc }: { qrSrc: string }) {
             ))}
           </div>
         </fieldset>
+        <div>
+          <p className="field-label">Терезе қай жаққа қарайды? (күн түсуі)</p>
+          <div role="radiogroup" aria-label="Терезе бағыты" className="grid grid-cols-4 gap-1">
+            {WINDOW_DIRS.map((d) => (
+              <button
+                key={d.id}
+                type="button"
+                role="radio"
+                aria-checked={dir === d.id}
+                onClick={() => setDir(d.id)}
+                className={`min-h-10 rounded-xl border px-1 text-xs font-semibold sm:text-sm ${dir === d.id ? "border-forest bg-forest text-white" : "border-line bg-white hover:bg-mint"}`}
+              >
+                {d.label}
+              </button>
+            ))}
+          </div>
+        </div>
         <details className="rounded-xl bg-paper px-3 py-2 ring-1 ring-line" open>
           <summary className="cursor-pointer font-semibold">Термогигрометр көрсеткіші (міндетті емес)</summary>
           <p className="mt-1 text-xs text-muted">Залда экрандағы TA318 мәнін, үйде өз құралыңыздың мәнін жазыңыз. Басы мен соңын жазсаңыз, CO₂ ылғалдылық арқылы да бағаланады.</p>
@@ -252,9 +303,41 @@ export function RoomCheck({ qrSrc }: { qrSrc: string }) {
                 </li>
               ))}
             </ul>
+            {flora && (
+              <div className="rounded-xl bg-white px-3 py-3 ring-1 ring-line">
+                <p className="font-semibold text-forest">🌿 Гүл: қанша және қандай?</p>
+                <p className="mt-1 text-[15px]">
+                  <b>Есеп:</b> аудан {fmt(a!, 1)} × {fmt(b!, 1)} = {fmt(flora.area, 1)} м². 10 м²-ге {PLANTS_PER_10} гүл: {fmt(flora.area, 1)} ÷ 10 × {PLANTS_PER_10} ≈ <b>{flora.need} гүл</b>.
+                  {" "}Қазір {flora.have} гүл бар{flora.add > 0 ? <>, тағы <b>{flora.add}</b> гүл қосуға болады.</> : ", бұл жеткілікті."}
+                </p>
+                {flora.sun && (
+                  <p className="mt-1 text-[15px]">
+                    <b>Күн:</b> бүгін тал түсте күн биіктігі h = 90° − {fmt(LAT, 2)}° + ({fmt(flora.sun.delta, 1)}°) ≈ <b>{fmt(flora.sun.h)}°</b>. Сәуле еденде d = {fmt(flora.sun.H, 1)} ÷ tg {fmt(flora.sun.h)}° ≈ <b>{fmt(flora.sun.d, 1)} м</b>-ге жетеді: осы аймақ — күн сүйгіш гүлдерге.
+                  </p>
+                )}
+                {flora.light ? (
+                  <>
+                    <p className="mt-1 text-[15px]">
+                      <b>Жарық:</b> {LIGHT_KK[flora.light]}. Сай келетін гүлдер:
+                    </p>
+                    <ul className="mt-1 flex flex-wrap gap-1">
+                      {flora.list.map((p) => (
+                        <li key={p.id} className="rounded-full bg-mint px-2.5 py-1 text-sm text-forest">
+                          {p.name}
+                        </li>
+                      ))}
+                    </ul>
+                  </>
+                ) : (
+                  <p className="mt-1 text-sm text-muted">Терезе бағытын белгілесеңіз, қандай гүл сай келетінін көрсетеміз.</p>
+                )}
+                <p className="mt-2 text-xs text-muted">Гүл CO₂-ні азайтпайды, ауаны желдету тазартады (Cummings & Waring, 2019). Гүл — ылғалдылық, көңіл-күй және оқу үшін.</p>
+              </div>
+            )}
             <AskAi
+              langToggle
               label="ЖИ кеңесі"
-              question={`Мен ${place.toLowerCase()} ауасын тексердім. Деректерге қарап: 1) бөлме осы адам санына жарай ма; 2) қанша минут сайын желдету керек; 3) гүл мен ылғалдылық бойынша не істеу керек. Әлемдік зерттеулерге (Автор, жыл) түрінде сілте. 5–6 сөйлеммен жаз.`}
+              question={`Мен ${place.toLowerCase()} ауасын тексердім. Деректерге қарап: 1) бөлме осы адам санына жарай ма; 2) қанша минут сайын желдету керек; 3) қанша және қандай гүл қойған дұрыс (терезе бағыты мен күнді ескер), ылғалдылық бойынша не істеу керек. Әлемдік зерттеулерге (Автор, жыл) түрінде сілте. 5–6 сөйлеммен жаз.`}
               context={context}
             />
           </>

@@ -77,7 +77,7 @@ export async function POST(request: Request) {
   const ip = request.headers.get("x-forwarded-for")?.split(",")[0].trim() || "local";
   if (limited(ip)) return fail(429, "Сұрақ тым жиі жіберілді. Бір минуттан кейін қайталап көріңіз.");
 
-  let body: { messages?: unknown; context?: unknown };
+  let body: { messages?: unknown; context?: unknown; lang?: unknown };
   try {
     body = await request.json();
   } catch {
@@ -92,7 +92,8 @@ export async function POST(request: Request) {
   if (!messages.length || messages[messages.length - 1].role !== "user") return fail(400, "Сұрақ бос.");
   const context = typeof body.context === "string" ? body.context.slice(0, MAX_CONTEXT) : "";
 
-  const systemText = `${SYSTEM}\n\nПЛАТФОРМА ДЕРЕКТЕРІ:\n${platformKnowledge()}${context ? `\n\nОҚУШЫ КӨРІП ОТЫРҒАН ДЕРЕКТЕР (платформадан автоматты түрде алынды):\n${context}` : ""}`;
+  const langNote = body.lang === "ru" ? "\n\nМАҢЫЗДЫ: пайдаланушы орыс тілін таңдады. Бұл жолы жауапты толығымен ОРЫС тілінде жаз (Отвечай полностью на русском языке). Қалған ережелер өзгермейді." : "";
+  const systemText = `${SYSTEM}${langNote}\n\nПЛАТФОРМА ДЕРЕКТЕРІ:\n${platformKnowledge()}${context ? `\n\nОҚУШЫ КӨРІП ОТЫРҒАН ДЕРЕКТЕР (платформадан автоматты түрде алынды):\n${context}` : ""}`;
 
   // Gemini диалогы user хабарламасынан басталуы керек
   while (messages.length && messages[0].role !== "user") messages.shift();

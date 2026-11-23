@@ -9,11 +9,14 @@ export function AskAi({
   label,
   question,
   context,
+  langToggle = false,
 }: {
   label: string;
   question: string;
   context: string;
+  langToggle?: boolean;
 }) {
+  const [lang, setLang] = useState<"kk" | "ru">("kk");
   const [busy, setBusy] = useState(false);
   const [text, setText] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -29,6 +32,7 @@ export function AskAi({
         body: JSON.stringify({
           messages: [{ role: "user", content: question }],
           context,
+          lang,
         }),
       });
       const data = (await res.json().catch(() => ({}))) as {
@@ -49,6 +53,23 @@ export function AskAi({
 
   return (
     <div className="flex flex-col gap-2">
+      {langToggle && (
+        <div role="radiogroup" aria-label="Жауап тілі" className="flex items-center gap-1 text-sm">
+          <span className="text-muted">Жауап тілі:</span>
+          {(["kk", "ru"] as const).map((l) => (
+            <button
+              key={l}
+              type="button"
+              role="radio"
+              aria-checked={lang === l}
+              onClick={() => setLang(l)}
+              className={`min-h-8 rounded-lg border px-2.5 font-semibold ${lang === l ? "border-forest bg-forest text-white" : "border-line bg-white hover:bg-mint"}`}
+            >
+              {l === "kk" ? "Қазақша" : "Русский"}
+            </button>
+          ))}
+        </div>
+      )}
       <button
         type="button"
         className="btn btn-ghost !min-h-10 max-w-full self-start whitespace-normal text-left"
@@ -61,7 +82,7 @@ export function AskAi({
         ) : (
           <Bot size={16} aria-hidden />
         )}{" "}
-        {busy ? "ЖИ ойланып жатыр…" : text ? "ЖИ-ден қайта сұрау" : label}
+        {busy ? (lang === "ru" ? "ИИ думает…" : "ЖИ ойланып жатыр…") : text ? (lang === "ru" ? "Спросить ИИ ещё раз" : "ЖИ-ден қайта сұрау") : lang === "ru" ? "Совет ИИ" : label}
       </button>
       {error && (
         <p
