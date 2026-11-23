@@ -10,13 +10,16 @@ export function AskAi({
   question,
   context,
   langToggle = false,
+  lang: langProp,
 }: {
   label: string;
   question: string;
   context: string;
   langToggle?: boolean;
+  lang?: "kk" | "ru";
 }) {
-  const [lang, setLang] = useState<"kk" | "ru">("kk");
+  const [langState, setLang] = useState<"kk" | "ru">("kk");
+  const lang = langProp ?? langState;
   const [busy, setBusy] = useState(false);
   const [text, setText] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -41,7 +44,7 @@ export function AskAi({
       };
       if (!res.ok || !data.text)
         throw new Error(
-          data.error || "ЖИ жауап бере алмады. Қайталап көріңіз.",
+          data.error || (lang === "ru" ? "ИИ не смог ответить. Попробуйте ещё раз." : "ЖИ жауап бере алмады. Қайталап көріңіз."),
         );
       setText(data.text);
     } catch (e) {
@@ -98,7 +101,7 @@ export function AskAi({
           aria-live="polite"
         >
           <p className="mb-1 flex items-center gap-1 text-xs font-semibold text-forest">
-            <Bot size={14} aria-hidden /> ЖИ кеңесі (тексеріп қолданыңыз)
+            <Bot size={14} aria-hidden /> {lang === "ru" ? "Совет ИИ (проверяйте)" : "ЖИ кеңесі (тексеріп қолданыңыз)"}
           </p>
           <Formatted text={text} />
         </div>

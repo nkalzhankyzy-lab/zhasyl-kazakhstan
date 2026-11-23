@@ -14,6 +14,23 @@ import type { WindowDir } from "@/lib/types";
 const LAT = 44.85; // Қызылорда
 const PLANTS_PER_10 = 3; // экопаспорттағы толық ұпай: 10 м²-ге 3 гүл
 const LIGHT_KK = { shade: "көлеңке (тікелей күн аз)", partial: "жартылай жарық (таңертең күн)", bright: "жарық, күн көп" } as const;
+const LIGHT_RU = { shade: "тень (прямого солнца мало)", partial: "полутень (солнце утром)", bright: "светло, много солнца" } as const;
+export type Lang = "kk" | "ru";
+const DIR_RU: Record<WindowDir, string> = { N: "Север", NE: "Северо-восток", E: "Восток", SE: "Юго-восток", S: "Юг", SW: "Юго-запад", W: "Запад", NW: "Северо-запад" };
+const PLANT_RU: Record<string, string> = {
+  chlorophytum: "Хлорофитум", sansevieria: "Сансевиерия", zamioculcas: "Замиокулькас (долларовое дерево)", spathiphyllum: "Спатифиллум (женское счастье)",
+  epipremnum: "Эпипремнум (сциндапсус)", aloe: "Алоэ", cactus: "Кактус", pelargonium: "Пеларгония (герань)", kalanchoe: "Каланхоэ", ficus: "Фикус Бенджамина",
+  monstera: "Монстера", dracaena: "Драцена", tradescantia: "Традесканция", begonia: "Бегония", saintpaulia: "Фиалка (сенполия)", nephrolepis: "Папоротник (нефролепис)",
+  schefflera: "Шефлера", "lucky-bamboo": "Бамбук (драцена Сандера)", lalagul: "Тюльпан", hedera: "Плющ",
+};
+const PLACE_RU: Record<string, string> = { "Сынып": "Класс", "Акт залы": "Актовый зал", "Үй бөлмесі": "Комната дома", "Кеңсе": "Офис" };
+const WIN_RU: Record<string, string> = { closed: "Окна и дверь закрыты", vent: "Открыта форточка", open: "Окно открыто настежь" };
+function ventTipRu(t: number): string {
+  if (t < -5) return `На улице ${t.toFixed(0)} °C, мороз. Не держите окно долго открытым: на перемене откройте настежь на 3–5 минут.`;
+  if (t < 10) return `На улице ${t.toFixed(0)} °C, прохладно. На перемене проветривайте 5–10 минут, во время урока достаточно форточки.`;
+  if (t <= 28) return `На улице ${t.toFixed(0)} °C, комфортно. Окно можно держать открытым и во время урока.`;
+  return `На улице ${t.toFixed(0)} °C, жарко. Проветривайте утром и вечером, днём закрывайте окно и задёргивайте шторы.`;
+}
 
 /** Бүгінгі күннің тал түстегі биіктігі: h = 90° − φ + δ */
 function noonAltitude(d = new Date()) {
@@ -63,7 +80,9 @@ function Field({ id, label, value, onChange, hint, suffix }: { id: string; label
   );
 }
 
-export function RoomCheck({ qrSrc }: { qrSrc: string }) {
+export function RoomCheck({ qrSrc, lang = "kk" }: { qrSrc: string; lang?: Lang }) {
+  const ru = lang === "ru";
+  const T = (kk: string, r: string) => (ru ? r : kk);
   const [place, setPlace] = useState<(typeof PLACES)[number]>("Сынып");
   const [win, setWin] = useState<WinId>("closed");
   const [dir, setDir] = useState<WindowDir | null>(null);
@@ -113,20 +132,22 @@ export function RoomCheck({ qrSrc }: { qrSrc: string }) {
     if (final > 1000)
       tips.push({
         tone: "warn",
-        text: `${fmt(min)} минуттан кейін CO₂ шамамен ${fmt(final)} ppm болады — 1000 ppm-нен жоғары. ${to1000 !== null ? `Шамамен әр ${Math.max(5, Math.floor(to1000))} минут сайын` : "Үзіліс сайын"} 5–10 минут желдетіңіз. 1000 ppm кезінде шешім қабылдау тестінің нәтижесі төмендеген (Satish, 2012).`,
+        text: ru
+          ? `Через ${fmt(min)} минут CO₂ будет около ${fmt(final)} ppm — выше 1000 ppm. ${to1000 !== null ? `Примерно каждые ${Math.max(5, Math.floor(to1000))} минут` : "На каждой перемене"} проветривайте 5–10 минут. При 1000 ppm результаты теста на принятие решений снижались (Satish, 2012).`
+          : `${fmt(min)} минуттан кейін CO₂ шамамен ${fmt(final)} ppm болады — 1000 ppm-нен жоғары. ${to1000 !== null ? `Шамамен әр ${Math.max(5, Math.floor(to1000))} минут сайын` : "Үзіліс сайын"} 5–10 минут желдетіңіз. 1000 ppm кезінде шешім қабылдау тестінің нәтижесі төмендеген (Satish, 2012).`,
       });
-    else tips.push({ tone: "good", text: `${fmt(min)} минут ішінде CO₂ шамамен ${fmt(final)} ppm-ге дейін көтеріледі. Бұл 1000 ppm-нен төмен, ауа жеткілікті.` });
-    if (out) tips.push({ tone: "info", text: ventTipForOutdoor(out.t) });
-    if (perArea < 2.5) tips.push({ tone: "warn", text: `Бір адамға ${fmt(perArea, 1)} м² келеді. Сынып үшін жиі қолданылатын бағдар — бір оқушыға кемінде 2,5 м². Бөлме бұл адам санына тар.` });
-    else tips.push({ tone: "good", text: `Бір адамға ${fmt(perArea, 1)} м² келеді — бұл 2,5 м² бағдарынан көп.` });
+    else tips.push({ tone: "good", text: T(`${fmt(min)} минут ішінде CO₂ шамамен ${fmt(final)} ppm-ге дейін көтеріледі. Бұл 1000 ppm-нен төмен, ауа жеткілікті.`, `За ${fmt(min)} минут CO₂ поднимется примерно до ${fmt(final)} ppm. Это ниже 1000 ppm, воздуха достаточно.`) });
+    if (out) tips.push({ tone: "info", text: ru ? ventTipRu(out.t) : ventTipForOutdoor(out.t) });
+    if (perArea < 2.5) tips.push({ tone: "warn", text: T(`Бір адамға ${fmt(perArea, 1)} м² келеді. Сынып үшін жиі қолданылатын бағдар — бір оқушыға кемінде 2,5 м². Бөлме бұл адам санына тар.`, `На одного человека ${fmt(perArea, 1)} м². Частый ориентир для класса — не менее 2,5 м² на ученика. Комната тесная для такого числа людей.`) });
+    else tips.push({ tone: "good", text: T(`Бір адамға ${fmt(perArea, 1)} м² келеді — бұл 2,5 м² бағдарынан көп.`, `На одного человека ${fmt(perArea, 1)} м² — больше ориентира 2,5 м².`) });
     if (rhNow !== null) {
-      if (rhNow < 40) tips.push({ tone: "warn", text: `Ылғалдылық ${fmt(rhNow)}% — ауа құрғақ. 40–60% ең қолайлы деп саналады (Arundel және т.б., 1986). Спатифиллум, хлорофитум сияқты ылғал бөлетін гүлдер қосып, суаруды жүйелі етіңіз.` });
-      else if (rhNow > 60) tips.push({ tone: "warn", text: `Ылғалдылық ${fmt(rhNow)}% — тым ылғал. Жиірек желдетіңіз, саңырауқұлақ пайда болмауын бақылаңыз.` });
-      else tips.push({ tone: "good", text: `Ылғалдылық ${fmt(rhNow)}% — 40–60% қолайлы аралықта.` });
+      if (rhNow < 40) tips.push({ tone: "warn", text: T(`Ылғалдылық ${fmt(rhNow)}% — ауа құрғақ. 40–60% ең қолайлы деп саналады (Arundel және т.б., 1986). Спатифиллум, хлорофитум сияқты ылғал бөлетін гүлдер қосып, суаруды жүйелі етіңіз.`, `Влажность ${fmt(rhNow)}% — воздух сухой. Оптимально 40–60% (Arundel и др., 1986). Добавьте растения, испаряющие влагу (спатифиллум, хлорофитум), и поливайте регулярно.`) });
+      else if (rhNow > 60) tips.push({ tone: "warn", text: T(`Ылғалдылық ${fmt(rhNow)}% — тым ылғал. Жиірек желдетіңіз, саңырауқұлақ пайда болмауын бақылаңыз.`, `Влажность ${fmt(rhNow)}% — слишком влажно. Проветривайте чаще, следите, чтобы не появилась плесень.`) });
+      else tips.push({ tone: "good", text: T(`Ылғалдылық ${fmt(rhNow)}% — 40–60% қолайлы аралықта.`, `Влажность ${fmt(rhNow)}% — в комфортном диапазоне 40–60%.`) });
     }
     if (plantsPer10 < 1)
-      tips.push({ tone: "info", text: `Гүл аз: 10 м²-ге ${fmt(plantsPer10, 1)} гүл. Тағы ${Math.max(1, Math.ceil(area / 10 - (plants ?? 0)))} гүл қосуға болады. Гүл CO₂-ні айтарлықтай азайтпайды (Cummings & Waring, 2019), бірақ көңіл-күй мен ылғалдылыққа пайдалы.` });
-    else tips.push({ tone: "info", text: `10 м²-ге ${fmt(plantsPer10, 1)} гүл келеді. Есіңізде болсын: гүл CO₂-ні азайтпайды, ауаны желдету тазартады (Cummings & Waring, 2019).` });
+      tips.push({ tone: "info", text: T(`Гүл аз: 10 м²-ге ${fmt(plantsPer10, 1)} гүл. Гүл CO₂-ні айтарлықтай азайтпайды (Cummings & Waring, 2019), бірақ көңіл-күй мен ылғалдылыққа пайдалы.`, `Растений мало: ${fmt(plantsPer10, 1)} на 10 м². Растения почти не снижают CO₂ (Cummings & Waring, 2019), но полезны для настроения и влажности.`) });
+    else tips.push({ tone: "info", text: T(`10 м²-ге ${fmt(plantsPer10, 1)} гүл келеді. Есіңізде болсын: гүл CO₂-ні азайтпайды, ауаны желдету тазартады (Cummings & Waring, 2019).`, `На 10 м² приходится ${fmt(plantsPer10, 1)} растения. Помните: растения не снижают CO₂, воздух очищает проветривание (Cummings & Waring, 2019).`) });
     result = { area, v, perArea, perVol: v / n, co2End, to1000, humCo2, plantsPer10, rhNow, tips };
   }
 
@@ -174,10 +195,10 @@ export function RoomCheck({ qrSrc }: { qrSrc: string }) {
       <section aria-labelledby="in-title" className="card flex min-w-0 flex-col gap-4 p-4 sm:p-5">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 id="in-title" className="font-serif text-xl font-bold text-forest">
-            Бөлме туралы
+            {T("Бөлме туралы", "О комнате")}
           </h2>
           <button type="button" className="btn btn-ghost !min-h-10" onClick={() => setQr(true)}>
-            <QrCode size={18} aria-hidden /> QR-кодты көрсету
+            <QrCode size={18} aria-hidden /> {T("QR-кодты көрсету", "Показать QR-код")}
           </button>
         </div>
         <div role="radiogroup" aria-label="Орын" className="flex flex-wrap gap-1">
@@ -190,33 +211,33 @@ export function RoomCheck({ qrSrc }: { qrSrc: string }) {
               onClick={() => setPlace(p)}
               className={`min-h-10 rounded-xl border px-3 text-sm font-semibold ${place === p ? "border-forest bg-forest text-white" : "border-line bg-white hover:bg-mint"}`}
             >
-              {p}
+              {ru ? PLACE_RU[p] : p}
             </button>
           ))}
         </div>
         <div className="grid grid-cols-3 gap-2">
-          <Field id="a" label="Ұзындығы" value={f.a} onChange={set("a")} suffix="м" />
-          <Field id="b" label="Ені" value={f.b} onChange={set("b")} suffix="м" />
-          <Field id="h" label="Биіктігі" value={f.h} onChange={set("h")} suffix="м" />
+          <Field id="a" label={T("Ұзындығы", "Длина")} value={f.a} onChange={set("a")} suffix="м" />
+          <Field id="b" label={T("Ені", "Ширина")} value={f.b} onChange={set("b")} suffix="м" />
+          <Field id="h" label={T("Биіктігі", "Высота")} value={f.h} onChange={set("h")} suffix="м" />
         </div>
         <div className="grid grid-cols-3 gap-2">
-          <Field id="n" label="Адам саны" value={f.n} onChange={set("n")} />
-          <Field id="plants" label="Гүл саны" value={f.plants} onChange={set("plants")} />
-          <Field id="min" label="Ұзақтығы" value={f.min} onChange={set("min")} suffix="мин" />
+          <Field id="n" label={T("Адам саны", "Людей")} value={f.n} onChange={set("n")} />
+          <Field id="plants" label={T("Гүл саны", "Растений")} value={f.plants} onChange={set("plants")} />
+          <Field id="min" label={T("Ұзақтығы", "Время")} value={f.min} onChange={set("min")} suffix="мин" />
         </div>
         <fieldset>
-          <legend className="field-label">Желдету</legend>
+          <legend className="field-label">{T("Желдету", "Проветривание")}</legend>
           <div className="flex flex-col gap-1.5">
             {WINDOWS.map((w) => (
               <label key={w.id} className="flex items-center gap-2 text-[15px]">
                 <input type="radio" name="win" className="h-4 w-4 accent-forest" checked={win === w.id} onChange={() => setWin(w.id)} />
-                {w.label}
+                {ru ? WIN_RU[w.id] : w.label}
               </label>
             ))}
           </div>
         </fieldset>
         <div>
-          <p className="field-label">Терезе қай жаққа қарайды? (күн түсуі)</p>
+          <p className="field-label">{T("Терезе қай жаққа қарайды? (күн түсуі)", "Куда выходят окна? (солнце)")}</p>
           <div role="radiogroup" aria-label="Терезе бағыты" className="grid grid-cols-4 gap-1">
             {WINDOW_DIRS.map((d) => (
               <button
@@ -227,73 +248,73 @@ export function RoomCheck({ qrSrc }: { qrSrc: string }) {
                 onClick={() => setDir(d.id)}
                 className={`min-h-10 rounded-xl border px-1 text-xs font-semibold sm:text-sm ${dir === d.id ? "border-forest bg-forest text-white" : "border-line bg-white hover:bg-mint"}`}
               >
-                {d.label}
+                {ru ? DIR_RU[d.id] : d.label}
               </button>
             ))}
           </div>
         </div>
         <details className="rounded-xl bg-paper px-3 py-2 ring-1 ring-line" open>
-          <summary className="cursor-pointer font-semibold">Термогигрометр көрсеткіші (міндетті емес)</summary>
-          <p className="mt-1 text-xs text-muted">Залда экрандағы TA318 мәнін, үйде өз құралыңыздың мәнін жазыңыз. Басы мен соңын жазсаңыз, CO₂ ылғалдылық арқылы да бағаланады.</p>
+          <summary className="cursor-pointer font-semibold">{T("Термогигрометр көрсеткіші (міндетті емес)", "Показания термогигрометра (необязательно)")}</summary>
+          <p className="mt-1 text-xs text-muted">{T("Залда экрандағы TA318 мәнін, үйде өз құралыңыздың мәнін жазыңыз. Басы мен соңын жазсаңыз, CO₂ ылғалдылық арқылы да бағаланады.", "В зале впишите значение TA318 с экрана, дома — своего прибора. Если указать начало и конец, CO₂ оценится и по влажности.")}</p>
           <div className="mt-2 grid grid-cols-2 gap-2">
-            <Field id="t1" label="Басында, °C" value={f.t1} onChange={set("t1")} />
-            <Field id="rh1" label="Басында, %" value={f.rh1} onChange={set("rh1")} />
-            <Field id="t2" label="Соңында, °C" value={f.t2} onChange={set("t2")} />
-            <Field id="rh2" label="Соңында, %" value={f.rh2} onChange={set("rh2")} />
+            <Field id="t1" label={T("Басында, °C", "В начале, °C")} value={f.t1} onChange={set("t1")} />
+            <Field id="rh1" label={T("Басында, %", "В начале, %")} value={f.rh1} onChange={set("rh1")} />
+            <Field id="t2" label={T("Соңында, °C", "В конце, °C")} value={f.t2} onChange={set("t2")} />
+            <Field id="rh2" label={T("Соңында, %", "В конце, %")} value={f.rh2} onChange={set("rh2")} />
           </div>
           <div className="mt-2">
-            <Field id="co2" label="CO₂ өлшегіш болса, ppm" value={f.co2} onChange={set("co2")} />
+            <Field id="co2" label={T("CO₂ өлшегіш болса, ppm", "Если есть CO₂-метр, ppm")} value={f.co2} onChange={set("co2")} />
           </div>
         </details>
       </section>
 
       <section aria-labelledby="out-title" aria-live="polite" className="card flex min-w-0 flex-col gap-3 p-4 sm:p-5">
         <h2 id="out-title" className="font-serif text-xl font-bold text-forest">
-          Нәтиже
+          {T("Нәтиже", "Результат")}
         </h2>
         <p className="flex items-center gap-2 rounded-xl bg-white px-3 py-2 text-sm ring-1 ring-line">
           <CloudSun size={18} className="shrink-0 text-leaf" aria-hidden />
           {out ? (
             <span>
-              Сыртта қазір ({WEATHER_PLACE}): <b>{fmt(out.t, 1)} °C</b>, ылғалдылық <b>{fmt(out.rh)}%</b>
+              {T("Сыртта қазір", "Сейчас на улице")} ({ru ? "Кызылорда" : WEATHER_PLACE}): <b>{fmt(out.t, 1)} °C</b>, {T("ылғалдылық", "влажность")} <b>{fmt(out.rh)}%</b>
               <span className="text-xs text-muted"> · {WEATHER_SOURCE}</span>
             </span>
           ) : outdoor === "error" ? (
-            <span className="text-muted">Сыртқы ауа райы жүктелмеді. Есептеу онсыз да жұмыс істейді.</span>
+            <span className="text-muted">{T("Сыртқы ауа райы жүктелмеді. Есептеу онсыз да жұмыс істейді.", "Погода не загрузилась. Расчёт работает и без неё.")}</span>
           ) : (
-            <span className="text-muted">Сыртқы ауа райы жүктелуде…</span>
+            <span className="text-muted">{T("Сыртқы ауа райы жүктелуде…", "Загружаем погоду…")}</span>
           )}
         </p>
         {!result ? (
-          <p className="text-muted">Бөлменің өлшемін, адам санын және ұзақтығын толтырыңыз.</p>
+          <p className="text-muted">{T("Бөлменің өлшемін, адам санын және ұзақтығын толтырыңыз.", "Заполните размеры комнаты, число людей и время.")}</p>
         ) : (
           <>
             <dl className="grid grid-cols-2 gap-2 text-sm">
               <div className="rounded-xl bg-white px-3 py-2 ring-1 ring-line">
-                <dt className="text-xs text-muted">Көлемі</dt>
+                <dt className="text-xs text-muted">{T("Көлемі", "Объём")}</dt>
                 <dd className="text-lg font-bold">{fmt(result.v)} м³</dd>
               </div>
               <div className="rounded-xl bg-white px-3 py-2 ring-1 ring-line">
-                <dt className="text-xs text-muted">Бір адамға</dt>
+                <dt className="text-xs text-muted">{T("Бір адамға", "На человека")}</dt>
                 <dd className="text-lg font-bold">{fmt(result.perArea, 1)} м²</dd>
               </div>
               <div className="rounded-xl bg-white px-3 py-2 ring-1 ring-line">
-                <dt className="text-xs text-muted">CO₂ соңында (баға)</dt>
+                <dt className="text-xs text-muted">{T("CO₂ соңында (баға)", "CO₂ в конце (оценка)")}</dt>
                 <dd className={`text-lg font-bold ${(co2m ?? result.humCo2 ?? result.co2End) > 1000 ? "text-orange-700" : "text-forest"}`}>
                   ≈ {fmt(co2m ?? result.humCo2 ?? result.co2End)} ppm
                 </dd>
               </div>
               <div className="rounded-xl bg-white px-3 py-2 ring-1 ring-line">
-                <dt className="text-xs text-muted">1000 ppm-ге дейін</dt>
-                <dd className="text-lg font-bold">{result.to1000 === null ? "жетпейді" : `≈ ${result.to1000} мин`}</dd>
+                <dt className="text-xs text-muted">{T("1000 ppm-ге дейін", "До 1000 ppm")}</dt>
+                <dd className="text-lg font-bold">{result.to1000 === null ? T("жетпейді", "не достигнет") : `≈ ${result.to1000} мин`}</dd>
               </div>
             </dl>
             <p className="text-xs text-muted">
               {co2m
-                ? "CO₂ өлшегіш көрсеткіші қолданылды."
+                ? T("CO₂ өлшегіш көрсеткіші қолданылды.", "Использованы показания CO₂-метра.")
                 : result.humCo2 !== null
-                  ? `CO₂ ылғалдылық арқылы бағаланды. Көлем мен желдету моделі бойынша: ≈ ${fmt(result.co2End)} ppm.`
-                  : "CO₂ бөлме көлемі, адам саны және желдету арқылы бағаланды (басында 420 ppm деп алынды). Бұл өлшем емес, шамамен баға."}
+                  ? T(`CO₂ ылғалдылық арқылы бағаланды. Көлем мен желдету моделі бойынша: ≈ ${fmt(result.co2End)} ppm.`, `CO₂ оценён по влажности. По модели объёма и проветривания: ≈ ${fmt(result.co2End)} ppm.`)
+                  : T("CO₂ бөлме көлемі, адам саны және желдету арқылы бағаланды (басында 420 ppm деп алынды). Бұл өлшем емес, шамамен баға.", "CO₂ оценён по объёму, числу людей и проветриванию (в начале 420 ppm). Это не измерение, а примерная оценка.")}
             </p>
             <ul className="flex flex-col gap-2">
               {result.tips.map((t, i) => (
@@ -305,51 +326,58 @@ export function RoomCheck({ qrSrc }: { qrSrc: string }) {
             </ul>
             {flora && (
               <div className="rounded-xl bg-white px-3 py-3 ring-1 ring-line">
-                <p className="font-semibold text-forest">🌿 Гүл: қанша және қандай?</p>
-                <p className="mt-1 text-[15px]">
-                  <b>Есеп:</b> аудан {fmt(a!, 1)} × {fmt(b!, 1)} = {fmt(flora.area, 1)} м². 10 м²-ге {PLANTS_PER_10} гүл: {fmt(flora.area, 1)} ÷ 10 × {PLANTS_PER_10} ≈ <b>{flora.need} гүл</b>.
-                  {" "}Қазір {flora.have} гүл бар{flora.add > 0 ? <>, тағы <b>{flora.add}</b> гүл қосуға болады.</> : ", бұл жеткілікті."}
-                </p>
+                <p className="font-semibold text-forest">🌿 {T("Гүл: қанша және қандай?", "Растения: сколько и какие?")}</p>
+                {ru ? (
+                  <p className="mt-1 text-[15px]">
+                    <b>Расчёт:</b> площадь {fmt(a!, 1)} × {fmt(b!, 1)} = {fmt(flora.area, 1)} м². {PLANTS_PER_10} растения на 10 м²: {fmt(flora.area, 1)} ÷ 10 × {PLANTS_PER_10} ≈ <b>{flora.need} растений</b>.
+                    {" "}Сейчас {flora.have}{flora.add > 0 ? <>, можно добавить ещё <b>{flora.add}</b>.</> : ", этого достаточно."}
+                  </p>
+                ) : (
+                  <p className="mt-1 text-[15px]">
+                    <b>Есеп:</b> аудан {fmt(a!, 1)} × {fmt(b!, 1)} = {fmt(flora.area, 1)} м². 10 м²-ге {PLANTS_PER_10} гүл: {fmt(flora.area, 1)} ÷ 10 × {PLANTS_PER_10} ≈ <b>{flora.need} гүл</b>.
+                    {" "}Қазір {flora.have} гүл бар{flora.add > 0 ? <>, тағы <b>{flora.add}</b> гүл қосуға болады.</> : ", бұл жеткілікті."}
+                  </p>
+                )}
                 {flora.sun && (
                   <p className="mt-1 text-[15px]">
-                    <b>Күн:</b> бүгін тал түсте күн биіктігі h = 90° − {fmt(LAT, 2)}° + ({fmt(flora.sun.delta, 1)}°) ≈ <b>{fmt(flora.sun.h)}°</b>. Сәуле еденде d = {fmt(flora.sun.H, 1)} ÷ tg {fmt(flora.sun.h)}° ≈ <b>{fmt(flora.sun.d, 1)} м</b>-ге жетеді: осы аймақ — күн сүйгіш гүлдерге.
+                    <b>{T("Күн:", "Солнце:")}</b> {T("бүгін тал түсте күн биіктігі", "сегодня в полдень высота солнца")} h = 90° − {fmt(LAT, 2)}° + ({fmt(flora.sun.delta, 1)}°) ≈ <b>{fmt(flora.sun.h)}°</b>. {T("Сәуле еденде", "Луч на полу")} d = {fmt(flora.sun.H, 1)} ÷ tg {fmt(flora.sun.h)}° ≈ <b>{fmt(flora.sun.d, 1)} м</b>{T("-ге жетеді: осы аймақ — күн сүйгіш гүлдерге.", ": эта зона — для светолюбивых растений.")}
                   </p>
                 )}
                 {flora.light ? (
                   <>
                     <p className="mt-1 text-[15px]">
-                      <b>Жарық:</b> {LIGHT_KK[flora.light]}. Сай келетін гүлдер:
+                      <b>{T("Жарық:", "Свет:")}</b> {ru ? LIGHT_RU[flora.light] : LIGHT_KK[flora.light]}. {T("Сай келетін гүлдер:", "Подходящие растения:")}
                     </p>
                     <ul className="mt-1 flex flex-wrap gap-1">
                       {flora.list.map((p) => (
                         <li key={p.id} className="rounded-full bg-mint px-2.5 py-1 text-sm text-forest">
-                          {p.name}
+                          {ru ? PLANT_RU[p.id] ?? p.name : p.name}
                         </li>
                       ))}
                     </ul>
                   </>
                 ) : (
-                  <p className="mt-1 text-sm text-muted">Терезе бағытын белгілесеңіз, қандай гүл сай келетінін көрсетеміз.</p>
+                  <p className="mt-1 text-sm text-muted">{T("Терезе бағытын белгілесеңіз, қандай гүл сай келетінін көрсетеміз.", "Укажите, куда выходят окна, и мы подскажем подходящие растения.")}</p>
                 )}
-                <p className="mt-2 text-xs text-muted">Гүл CO₂-ні азайтпайды, ауаны желдету тазартады (Cummings & Waring, 2019). Гүл — ылғалдылық, көңіл-күй және оқу үшін.</p>
+                <p className="mt-2 text-xs text-muted">{T("Гүл CO₂-ні азайтпайды, ауаны желдету тазартады (Cummings & Waring, 2019). Гүл — ылғалдылық, көңіл-күй және оқу үшін.", "Растения не снижают CO₂, воздух очищает проветривание (Cummings & Waring, 2019). Растения — для влажности, настроения и учёбы.")}</p>
               </div>
             )}
             <AskAi
-              langToggle
+              lang={lang}
               label="ЖИ кеңесі"
-              question={`Мен ${place.toLowerCase()} ауасын тексердім. Деректерге қарап: 1) бөлме осы адам санына жарай ма; 2) қанша минут сайын желдету керек; 3) қанша және қандай гүл қойған дұрыс (терезе бағыты мен күнді ескер), ылғалдылық бойынша не істеу керек. Әлемдік зерттеулерге (Автор, жыл) түрінде сілте. 5–6 сөйлеммен жаз.`}
+              question={ru ? `Я проверил(а) воздух: ${PLACE_RU[place].toLowerCase()}. По данным: 1) подходит ли комната для такого числа людей; 2) как часто проветривать; 3) сколько и каких растений поставить (учти направление окон и солнце), что делать с влажностью. Ссылайся на мировые исследования в виде (Автор, год). Ответь 5–6 предложениями на русском языке.` : `Мен ${place.toLowerCase()} ауасын тексердім. Деректерге қарап: 1) бөлме осы адам санына жарай ма; 2) қанша минут сайын желдету керек; 3) қанша және қандай гүл қойған дұрыс (терезе бағыты мен күнді ескер), ылғалдылық бойынша не істеу керек. Әлемдік зерттеулерге (Автор, жыл) түрінде сілте. 5–6 сөйлеммен жаз.`}
               context={context}
             />
           </>
         )}
       </section>
 
-      <Dialog open={qr} onClose={() => setQr(false)} title="Телефонмен сканерлеңіз" size="lg">
+      <Dialog open={qr} onClose={() => setQr(false)} title={T("Телефонмен сканерлеңіз", "Отсканируйте телефоном")} size="lg">
         <div className="flex flex-col items-center gap-3 py-2">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={qrSrc} alt="«Өз бөлмеңді тексер» бетінің QR-коды" className="aspect-square w-full max-w-[420px] rounded-2xl bg-white p-3 ring-1 ring-line" />
           <p className="text-center text-lg font-semibold text-forest">zhasyl-kazakhstan-bfkx.vercel.app/tekser</p>
-          <p className="text-center text-sm text-muted">Нәтиже тек сіздің телефоныңызда көрінеді, сайттың деректері өзгермейді.</p>
+          <p className="text-center text-sm text-muted">{T("Нәтиже тек сіздің телефоныңызда көрінеді, сайттың деректері өзгермейді.", "Результат виден только на вашем телефоне, данные сайта не меняются.")}</p>
         </div>
       </Dialog>
     </div>
