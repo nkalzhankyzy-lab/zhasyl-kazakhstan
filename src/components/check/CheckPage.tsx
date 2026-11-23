@@ -12,6 +12,9 @@ export function CheckPage() {
   const lang: Lang = chosen ?? (sp.get("lang") === "ru" ? "ru" : "kk");
   useEffect(() => {
     document.documentElement.lang = lang === "ru" ? "ru" : "kk";
+    return () => {
+      document.documentElement.lang = "kk";
+    };
   }, [lang]);
   function choose(l: Lang) {
     setChosen(l);

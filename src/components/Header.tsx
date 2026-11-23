@@ -3,7 +3,7 @@
 import { BookOpen, Bot, CloudOff, Database, FlaskConical, KeyRound, Library, Layers, LogIn, LogOut, Map as MapIcon, MessageSquareHeart, QrCode, School, Sprout, UserRound } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useAuth, useSyncStatus } from "@/lib/storage/hooks";
 import { signOut } from "@/lib/supabase/auth";
 import { SUPABASE_ENABLED } from "@/lib/supabase/client";
@@ -11,24 +11,38 @@ import { ChangePassword } from "./ChangePassword";
 import { Logo } from "./Logo";
 import { useLogin } from "./Providers";
 
-const NAV: { href: string; label: string; short?: string; icon: typeof MapIcon }[] = [
-  { href: "/", label: "Экокарта", icon: MapIcon },
-  { href: "/garden", label: "Менің бағым", short: "Бағым", icon: Sprout },
-  { href: "/lab", label: "Зертхана", icon: FlaskConical },
-  { href: "/schools", label: "Мектептер", icon: School },
-  { href: "/ai", label: "ЖИ көмекші", short: "ЖИ", icon: Bot },
+const NAV: { href: string; label: string; short?: string; ru: string; ruShort?: string; icon: typeof MapIcon }[] = [
+  { href: "/", label: "Экокарта", ru: "Экокарта", icon: MapIcon },
+  { href: "/garden", label: "Менің бағым", short: "Бағым", ru: "Мой сад", ruShort: "Сад", icon: Sprout },
+  { href: "/lab", label: "Зертхана", ru: "Лаборатория", icon: FlaskConical },
+  { href: "/schools", label: "Мектептер", ru: "Школы", icon: School },
+  { href: "/ai", label: "ЖИ көмекші", short: "ЖИ", ru: "ИИ-помощник", ruShort: "ИИ", icon: Bot },
 ];
 
 const MENU = [
-  { href: "/topyraq", label: "Қызылорда топырағы", icon: Layers },
-  { href: "/tekser", label: "Өз бөлмеңді тексер", icon: QrCode },
-  { href: "/saualnama", label: "Оқушы сауалнамасы", icon: MessageSquareHeart },
-  { href: "/journal", label: "Зерттеу күнделігі", icon: BookOpen },
-  { href: "/data", label: "Менің деректерім", icon: Database },
-  { href: "/sources", label: "Дереккөздер", icon: Library },
+  { href: "/topyraq", label: "Қызылорда топырағы", ru: "Почвы Кызылорды", icon: Layers },
+  { href: "/tekser", label: "Өз бөлмеңді тексер", ru: "Проверь свою комнату", icon: QrCode },
+  { href: "/saualnama", label: "Оқушы сауалнамасы", ru: "Опрос учеников", icon: MessageSquareHeart },
+  { href: "/journal", label: "Зерттеу күнделігі", ru: "Дневник исследования", icon: BookOpen },
+  { href: "/data", label: "Менің деректерім", ru: "Мои данные", icon: Database },
+  { href: "/sources", label: "Дереккөздер", ru: "Источники", icon: Library },
 ];
 
+/** Беттің тілі (html lang): «Өз бөлмеңді тексер» бетінде орысша таңдалса, мәзір де орысшаға ауысады */
+function useHtmlLang() {
+  return useSyncExternalStore(
+    (cb) => {
+      const o = new MutationObserver(cb);
+      o.observe(document.documentElement, { attributes: true, attributeFilter: ["lang"] });
+      return () => o.disconnect();
+    },
+    () => document.documentElement.lang,
+    () => "kk",
+  );
+}
+
 export function Header() {
+  const ru = useHtmlLang() === "ru";
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -36,7 +50,7 @@ export function Header() {
   const auth = useAuth();
   const sync = useSyncStatus();
   const login = useLogin();
-  const userLabel = auth.email ? auth.email.split("@")[0] : "Қонақ";
+  const userLabel = auth.email ? auth.email.split("@")[0] : ru ? "Гость" : "Қонақ";
   useEffect(() => {
     if (!open) return;
     const close = (e: MouseEvent | KeyboardEvent) => {
@@ -61,7 +75,10 @@ export function Header() {
         </Link>
         <nav aria-label="Негізгі мәзір" className="ml-auto hidden lg:block">
           <ul className="flex items-center gap-1">
-            {NAV.map(({ href, label, short, icon: Icon }) => (
+            {NAV.map(({ href, label: kkLabel, short: kkShort, ru: ruLabel, ruShort, icon: Icon }) => {
+              const label = ru ? ruLabel : kkLabel;
+              const short = ru ? ruShort : kkShort;
+              return (
               <li key={href}>
                 <Link
                   href={href}
@@ -75,7 +92,8 @@ export function Header() {
                   <span className="hidden xl:inline">{label}</span>
                 </Link>
               </li>
-            ))}
+              );
+            })}
           </ul>
         </nav>
         <div className="relative ml-auto lg:ml-2" ref={menuRef}>
@@ -109,10 +127,10 @@ export function Header() {
                   {sync.message}
                 </p>
               )}
-              {MENU.map(({ href, label, icon: Icon }) => (
+              {MENU.map(({ href, label, ru: ruLabel, icon: Icon }) => (
                 <Link key={href} role="menuitem" href={href} onClick={() => setOpen(false)} className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-[15px] font-medium hover:bg-mint">
                   <Icon size={18} className="text-forest" aria-hidden />
-                  {label}
+                  {ru ? ruLabel : label}
                 </Link>
               ))}
               {SUPABASE_ENABLED && auth.userId && (
@@ -126,7 +144,7 @@ export function Header() {
                   className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-[15px] font-medium hover:bg-mint"
                 >
                   <KeyRound size={18} className="text-forest" aria-hidden />
-                  Құпиясөзді өзгерту
+                  {ru ? "Сменить пароль" : "Құпиясөзді өзгерту"}
                 </button>
               )}
               {SUPABASE_ENABLED && (
@@ -141,7 +159,7 @@ export function Header() {
                   className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-[15px] font-medium hover:bg-mint"
                 >
                   {auth.userId ? <LogOut size={18} className="text-forest" aria-hidden /> : <LogIn size={18} className="text-forest" aria-hidden />}
-                  {auth.userId ? "Шығу" : "Мұғалім ретінде кіру"}
+                  {auth.userId ? (ru ? "Выйти" : "Шығу") : ru ? "Войти как учитель" : "Мұғалім ретінде кіру"}
                 </button>
               )}
             </div>
@@ -152,7 +170,10 @@ export function Header() {
       {/* Телефондағы мәзір */}
       <nav aria-label="Негізгі мәзір (телефон)" className="border-t border-line/60 lg:hidden">
         <ul className="grid grid-cols-5">
-          {NAV.map(({ href, label, short, icon: Icon }) => (
+          {NAV.map(({ href, label: kkLabel, short: kkShort, ru: ruLabel, ruShort, icon: Icon }) => {
+              const label = ru ? ruLabel : kkLabel;
+              const short = ru ? ruShort : kkShort;
+              return (
             <li key={href}>
               <Link
                 href={href}
@@ -165,7 +186,8 @@ export function Header() {
                 <span className="truncate">{short ?? label}</span>
               </Link>
             </li>
-          ))}
+              );
+            })}
         </ul>
       </nav>
     </header>
